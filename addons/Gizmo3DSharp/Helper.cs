@@ -14,66 +14,72 @@ public static class Helper
 
     public static void GetEdge(this Aabb aabb, int p_edge, out Vector3 r_from, out Vector3 r_to)
     {
+        r_from = r_to = default;
         Vector3 position = aabb.Position;
         Vector3 size = aabb.Size;
-        switch (p_edge) {
+        switch (p_edge)
+        {
             case 0: {
                 r_from = new(position.X + size.X, position.Y, position.Z);
                 r_to = new(position.X, position.Y, position.Z);
-            } break;
+                break;
+            }
             case 1: {
                 r_from = new(position.X + size.X, position.Y, position.Z + size.Z);
                 r_to = new(position.X + size.X, position.Y, position.Z);
-            } break;
+                break;
+            }
             case 2: {
                 r_from = new(position.X, position.Y, position.Z + size.Z);
                 r_to = new(position.X + size.X, position.Y, position.Z + size.Z);
-
-            } break;
+                break;
+            }
             case 3: {
                 r_from = new(position.X, position.Y, position.Z);
                 r_to = new(position.X, position.Y, position.Z + size.Z);
-
-            } break;
+                break;
+            }
             case 4: {
                 r_from = new(position.X, position.Y + size.Y, position.Z);
                 r_to = new(position.X + size.X, position.Y + size.Y, position.Z);
-            } break;
+                break;
+            }
             case 5: {
                 r_from = new(position.X + size.X, position.Y + size.Y, position.Z);
                 r_to = new(position.X + size.X, position.Y + size.Y, position.Z + size.Z);
-            } break;
+                break;
+            }
             case 6: {
                 r_from = new(position.X + size.X, position.Y + size.Y, position.Z + size.Z);
                 r_to = new(position.X, position.Y + size.Y, position.Z + size.Z);
-
-            } break;
+                break;
+            }
             case 7: {
                 r_from = new(position.X, position.Y + size.Y, position.Z + size.Z);
                 r_to = new(position.X, position.Y + size.Y, position.Z);
-
-            } break;
+                break;
+            }
             case 8: {
                 r_from = new(position.X, position.Y, position.Z + size.Z);
                 r_to = new(position.X, position.Y + size.Y, position.Z + size.Z);
-
-            } break;
+                break;
+            }
             case 9: {
                 r_from = new(position.X, position.Y, position.Z);
                 r_to = new(position.X, position.Y + size.Y, position.Z);
-
-            } break;
+                break;
+            }
             case 10: {
                 r_from = new(position.X + size.X, position.Y, position.Z);
                 r_to = new(position.X + size.X, position.Y + size.Y, position.Z);
-
-            } break;
+                break;
+            }
             case 11: {
                 r_from = new(position.X + size.X, position.Y, position.Z + size.Z);
                 r_to = new(position.X + size.X, position.Y + size.Y, position.Z + size.Z);
-            } break;
+                break;
+            }
         }
-        r_from = r_to = default;
     }
 
     public static Basis ScaledOrthogonal(this Basis basis, Vector3 scale)

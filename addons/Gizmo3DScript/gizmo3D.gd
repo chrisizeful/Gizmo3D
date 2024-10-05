@@ -1,3 +1,6 @@
+# Translated from C++ to GDScript with alterations, source from:
+# - https://github.com/godotengine/godot/blob/master/editor/plugins/node_3d_editor_plugin.h
+# - https://github.com/godotengine/godot/blob/master/editor/plugins/node_3d_editor_plugin.cpp
 class_name Gizmo3D;
 extends Node3D
 
