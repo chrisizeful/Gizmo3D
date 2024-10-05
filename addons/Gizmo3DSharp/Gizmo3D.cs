@@ -46,6 +46,12 @@ public partial class Gizmo3D : Node3D
         }
     }
 
+    [Export]
+    public Node3D Target { get; set; }
+    public bool Snapping { get; private set; }
+    public bool Editing { get; private set; }
+    public string Message { get; private set; }
+
     [ExportGroup("Style")]
     [Export]
     public float Size { get; set; } = 80.0f;
@@ -71,12 +77,6 @@ public partial class Gizmo3D : Node3D
     public float TranslateSnap { get; set; } = 1.0f;
     [Export(PropertyHint.Range, "0,5")]
     public float ScaleSnap { get; set; } = .25f;
-
-    public Node3D Target { get; set; }
-
-    public bool Snapping { get; private set; }
-    public bool Editing { get; private set; }
-    public string Message { get; private set; }
 
     ArrayMesh[] MoveGizmo = new ArrayMesh[3];
     ArrayMesh[] MovePlaneGizmo = new ArrayMesh[3];
@@ -124,7 +124,7 @@ public partial class Gizmo3D : Node3D
         VisibilityChanged += () => SetVisibility(Visible);
     }
 
-    public override void _UnhandledInput(InputEvent @event)
+    public override void _Input(InputEvent @event)
     {
         if (!Visible)
         {
@@ -135,7 +135,7 @@ public partial class Gizmo3D : Node3D
         {
             Snapping = key.Pressed;
         }
-        else if (@event is InputEventMouseButton button && button.ButtonIndex == MouseButton.Right)
+        else if (@event is InputEventMouseButton button && button.ButtonIndex == MouseButton.Left)
         {
             Editing = button.Pressed;
             if (!Editing)
@@ -145,7 +145,7 @@ public partial class Gizmo3D : Node3D
         }
         else if (@event is InputEventMouseMotion motion)
         {
-            if (Editing && motion.ButtonMask.HasFlag(MouseButtonMask.Right))
+            if (Editing && motion.ButtonMask.HasFlag(MouseButtonMask.Left))
             {
                 edit.MousePos = motion.Position;
                 UpdateTransform(false);

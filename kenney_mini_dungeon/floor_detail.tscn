@@ -7,8 +7,8 @@ size = Vector3(1, 0.1, 1)
 
 [node name="floor-detail" instance=ExtResource("1_m7dyd")]
 
-[node name="StaticBody3D" type="StaticBody3D" parent="floor-detail" index="0"]
+[node name="StaticBody3D" type="StaticBody3D" parent="." index="0"]
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="floor-detail/StaticBody3D" index="0"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="StaticBody3D" index="0"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.05, 0)
 shape = SubResource("BoxShape3D_06p5n")

@@ -2,14 +2,28 @@ using Godot;
 
 namespace Gizmo3DPlugin;
 
-public partial class Demo : Node3D
+public partial class DemoSharp : Node3D
 {
 
-	public override void _Ready()
-	{
-	}
+	[Export]
+	public Gizmo3D Gizmo { get; private set; }
 
-	public override void _Process(double delta)
-	{
-	}
+    public override void _Input(InputEvent @event)
+    {
+        if (@event is InputEventMouseButton button && button.ButtonIndex == MouseButton.Left && button.Pressed)
+		{
+			Camera3D camera = GetViewport().GetCamera3D();
+			Vector3 dir = camera.ProjectRayNormal(button.Position);
+			Vector3 from = camera.ProjectRayOrigin(button.Position);
+			var result = GetWorld3D().DirectSpaceState.IntersectRay(new PhysicsRayQueryParameters3D()
+			{
+				From = from,
+				To = from + dir * 1000.0f
+			});
+			if (result.Count == 0)
+				return;
+			Node3D collider = (Node3D) result["collider"];
+			Gizmo.Target = collider.GetParent<Node3D>();
+		}
+    }
 }
