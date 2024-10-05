@@ -11,8 +11,8 @@ config_version=5
 [application]
 
 config/name="Gizmo3D"
-run/main_scene="res://Demo.tscn"
-config/features=PackedStringArray("4.4", "C#", "Forward Plus")
+run/main_scene="res://demo/Demo.tscn"
+config/features=PackedStringArray("4.3", "C#", "Forward Plus")
 config/icon="res://icon.svg"
 
 [dotnet]
@@ -21,4 +21,4 @@ project/assembly_name="Gizmo3D"
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/Gizmo3D/plugin.cfg")
+enabled=PackedStringArray("res://addons/Gizmo3DSharp/plugin.cfg")

@@ -1,7 +1,7 @@
 [gd_scene load_steps=3 format=3 uid="uid://dw2fun6cmcxie"]
 
-[ext_resource type="Script" path="res://Demo.cs" id="1_r6fd2"]
-[ext_resource type="Script" path="res://addons/Gizmo3D/Gizmo3D.cs" id="2_wmj12"]
+[ext_resource type="Script" path="res://demo/Demo.cs" id="1_r6fd2"]
+[ext_resource type="Script" path="res://addons/Gizmo3DSharp/Gizmo3D.cs" id="2_wmj12"]
 
 [node name="Demo" type="Node3D"]
 script = ExtResource("1_r6fd2")

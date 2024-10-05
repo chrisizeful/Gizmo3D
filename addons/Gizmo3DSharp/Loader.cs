@@ -9,7 +9,7 @@ public partial class Loader : EditorPlugin
 
 	public override void _EnablePlugin()
 	{
-		AddCustomType("Gizmo3D", "Node3D", ResourceLoader.Load<CSharpScript>("res://addons/Gizmo3D/Gizmo3D.cs"), null);
+		AddCustomType("Gizmo3D", "Node3D", ResourceLoader.Load<CSharpScript>("res://addons/Gizmo3DSharp/Gizmo3D.cs"), null);
 	}
 
 	public override void _DisablePlugin()
