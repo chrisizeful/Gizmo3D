@@ -1,5 +1,7 @@
 using Godot;
 
+namespace Gizmo3DPlugin;
+
 public partial class Demo : Node3D
 {
 

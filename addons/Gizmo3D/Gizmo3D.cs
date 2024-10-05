@@ -1,6 +1,8 @@
 using Godot;
 using static Godot.RenderingServer;
 
+namespace Gizmo3DPlugin;
+
 // Translated from C++ to C# with alterations, source from:
 // - https://github.com/godotengine/godot/blob/master/editor/plugins/node_3d_editor_plugin.h
 // - https://github.com/godotengine/godot/blob/master/editor/plugins/node_3d_editor_plugin.cpp
