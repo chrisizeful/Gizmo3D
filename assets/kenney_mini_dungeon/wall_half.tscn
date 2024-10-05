@@ -1,5 +1,0 @@
-[gd_scene load_steps=2 format=3 uid="uid://cikdpisehdg7w"]
-
-[ext_resource type="PackedScene" uid="uid://be8hmf5cloa8d" path="res://assets/kenney_mini_dungeon/wall-half.glb" id="1_87imq"]
-
-[node name="wall-half" instance=ExtResource("1_87imq")]

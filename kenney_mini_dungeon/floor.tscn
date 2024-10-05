@@ -1,0 +1,13 @@
+[gd_scene load_steps=3 format=3 uid="uid://c0k6mjnu805c7"]
+
+[ext_resource type="PackedScene" uid="uid://dg5e4f7plbltk" path="res://kenney_mini_dungeon/floor.glb" id="1_johwe"]
+
+[sub_resource type="ConcavePolygonShape3D" id="ConcavePolygonShape3D_3pphx"]
+data = PackedVector3Array(-0.5, 0, -0.5, 0.5, 0, -0.5, 0.5, 0, 0.5, 0.5, 0, 0.5, -0.5, 0, 0.5, -0.5, 0, -0.5)
+
+[node name="floor" instance=ExtResource("1_johwe")]
+
+[node name="StaticBody3D" type="StaticBody3D" parent="floor" index="0"]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="floor/StaticBody3D" index="0"]
+shape = SubResource("ConcavePolygonShape3D_3pphx")
