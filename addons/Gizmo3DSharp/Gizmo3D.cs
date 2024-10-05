@@ -10,6 +10,7 @@ public partial class Gizmo3D : Node3D
 {
 
     const float DEFAULT_FLOAT_STEP = 0.001f;
+    const float MAX_Z = 1000000.0f;
 
     const float GIZMO_ARROW_SIZE = 0.35f;
     const float GIZMO_RING_HALF_WIDTH = 0.1f;
@@ -18,8 +19,6 @@ public partial class Gizmo3D : Node3D
     const float GIZMO_CIRCLE_SIZE = 1.1f;
     const float GIZMO_SCALE_OFFSET = GIZMO_CIRCLE_SIZE - 0.3f;
     const float GIZMO_ARROW_OFFSET = GIZMO_CIRCLE_SIZE + 0.15f;
-
-    const float MAX_Z = 1000000.0f;
 
     [Export]
     public ToolMode Mode { get; set; } = ToolMode.All;
