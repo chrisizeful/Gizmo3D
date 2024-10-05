@@ -157,9 +157,7 @@ public partial class Gizmo3D : Node3D
 
     public override void _Process(double delta)
     {
-        if (IsInstanceValid(Target) || !Target.IsQueuedForDeletion())
-            Target = null;
-        if (Target == null)
+        if (Target == null || !IsInstanceValid(Target) || Target.IsQueuedForDeletion())
             return;
         Position = Target.Position;
         UpdateTransformGizmoView();
