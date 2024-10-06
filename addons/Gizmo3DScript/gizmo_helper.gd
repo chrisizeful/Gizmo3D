@@ -6,7 +6,7 @@ static func set_on_top_of_alpha(material : BaseMaterial3D):
 	material.render_priority = Material.RENDER_PRIORITY_MAX
 	material.no_depth_test = true
 
-static func get_edge(aabb : AABB, p_edge : int, r_from : Vector3, r_to : Vector3) -> Array:
+static func get_edge(aabb : AABB, p_edge : int) -> Array:
 	var result := [2]
 	var position = aabb.position
 	var size = aabb.size

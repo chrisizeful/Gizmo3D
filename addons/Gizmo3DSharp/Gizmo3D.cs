@@ -110,7 +110,10 @@ public partial class Gizmo3D : Node3D
         set
         {
             if (IsNodeReady())
+            {
                 SelectionBoxMat.AlbedoColor = value;
+                SelectionBoxXrayMat.AlbedoColor = value * new Color(1, 1, 1, 0.15f);
+            }
             selectionBoxColor = value;
         }
     }
@@ -146,7 +149,7 @@ public partial class Gizmo3D : Node3D
     Rid[] AxisGizmoInstance = new Rid[3];
 
     ArrayMesh SelectionBox, SelectionBoxXray;
-    StandardMaterial3D SelectionBoxMat;
+    StandardMaterial3D SelectionBoxMat, SelectionBoxXrayMat;
     Rid SboxInstance, SboxInstanceOffset;
     Rid SboxXrayInstance, SboxXrayInstanceOffset;
 
@@ -228,15 +231,20 @@ public partial class Gizmo3D : Node3D
         }
         // Rotation white outline
         FreeRid(RotateGizmoInstance[3]);
+
+        FreeRid(SboxInstance);
+        FreeRid(SboxInstanceOffset);
+        FreeRid(SboxXrayInstance);
+        FreeRid(SboxXrayInstanceOffset);
     }
 
     void InitGizmoInstance()
     {
-        for (int i = 0; i < 3; i++) {
+        for (int i = 0; i < 3; i++)
+        {
             MoveGizmoInstance[i] = InstanceCreate();
             InstanceSetBase(MoveGizmoInstance[i], MoveGizmo[i].GetRid());
             InstanceSetScenario(MoveGizmoInstance[i], GetTree().Root.World3D.Scenario);
-            InstanceSetVisible(MoveGizmoInstance[i], true);
             InstanceGeometrySetCastShadowsSetting(MoveGizmoInstance[i], ShadowCastingSetting.Off);
             InstanceSetLayerMask(MoveGizmoInstance[i], Layers);
             InstanceGeometrySetFlag(MoveGizmoInstance[i], InstanceFlags.IgnoreOcclusionCulling, true);
@@ -245,7 +253,6 @@ public partial class Gizmo3D : Node3D
             MovePlaneGizmoInstance[i] = InstanceCreate();
             InstanceSetBase(MovePlaneGizmoInstance[i], MovePlaneGizmo[i].GetRid());
             InstanceSetScenario(MovePlaneGizmoInstance[i], GetTree().Root.World3D.Scenario);
-            InstanceSetVisible(MovePlaneGizmoInstance[i], true);
             InstanceGeometrySetCastShadowsSetting(MovePlaneGizmoInstance[i], ShadowCastingSetting.Off);
             InstanceSetLayerMask(MovePlaneGizmoInstance[i], Layers);
             InstanceGeometrySetFlag(MovePlaneGizmoInstance[i], InstanceFlags.IgnoreOcclusionCulling, true);
@@ -254,7 +261,6 @@ public partial class Gizmo3D : Node3D
             RotateGizmoInstance[i] = InstanceCreate();
             InstanceSetBase(RotateGizmoInstance[i], RotateGizmo[i].GetRid());
             InstanceSetScenario(RotateGizmoInstance[i], GetTree().Root.World3D.Scenario);
-            InstanceSetVisible(RotateGizmoInstance[i], true);
             InstanceGeometrySetCastShadowsSetting(RotateGizmoInstance[i], ShadowCastingSetting.Off);
             InstanceSetLayerMask(RotateGizmoInstance[i], Layers);
             InstanceGeometrySetFlag(RotateGizmoInstance[i], InstanceFlags.IgnoreOcclusionCulling, true);
@@ -263,7 +269,6 @@ public partial class Gizmo3D : Node3D
             ScaleGizmoInstance[i] = InstanceCreate();
             InstanceSetBase(ScaleGizmoInstance[i], ScaleGizmo[i].GetRid());
             InstanceSetScenario(ScaleGizmoInstance[i], GetTree().Root.World3D.Scenario);
-            InstanceSetVisible(ScaleGizmoInstance[i], true);
             InstanceGeometrySetCastShadowsSetting(ScaleGizmoInstance[i], ShadowCastingSetting.Off);
             InstanceSetLayerMask(ScaleGizmoInstance[i], Layers);
             InstanceGeometrySetFlag(ScaleGizmoInstance[i], InstanceFlags.IgnoreOcclusionCulling, true);
@@ -272,7 +277,6 @@ public partial class Gizmo3D : Node3D
             ScalePlaneGizmoInstance[i] = InstanceCreate();
             InstanceSetBase(ScalePlaneGizmoInstance[i], ScalePlaneGizmo[i].GetRid());
             InstanceSetScenario(ScalePlaneGizmoInstance[i], GetTree().Root.World3D.Scenario);
-            InstanceSetVisible(ScalePlaneGizmoInstance[i], true);
             InstanceGeometrySetCastShadowsSetting(ScalePlaneGizmoInstance[i], ShadowCastingSetting.Off);
             InstanceSetLayerMask(ScalePlaneGizmoInstance[i], Layers);
             InstanceGeometrySetFlag(ScalePlaneGizmoInstance[i], InstanceFlags.IgnoreOcclusionCulling, true);
@@ -281,7 +285,6 @@ public partial class Gizmo3D : Node3D
             AxisGizmoInstance[i] = InstanceCreate();
             InstanceSetBase(AxisGizmoInstance[i], AxisGizmo[i].GetRid());
             InstanceSetScenario(AxisGizmoInstance[i], GetTree().Root.World3D.Scenario);
-            InstanceSetVisible(AxisGizmoInstance[i], true);
             InstanceGeometrySetCastShadowsSetting(AxisGizmoInstance[i], ShadowCastingSetting.Off);
             InstanceSetLayerMask(AxisGizmoInstance[i], Layers);
             InstanceGeometrySetFlag(AxisGizmoInstance[i], InstanceFlags.IgnoreOcclusionCulling, true);
@@ -292,7 +295,6 @@ public partial class Gizmo3D : Node3D
         RotateGizmoInstance[3] = InstanceCreate();
         InstanceSetBase(RotateGizmoInstance[3], RotateGizmo[3].GetRid());
         InstanceSetScenario(RotateGizmoInstance[3], GetTree().Root.World3D.Scenario);
-        InstanceSetVisible(RotateGizmoInstance[3], true);
         InstanceGeometrySetCastShadowsSetting(RotateGizmoInstance[3], ShadowCastingSetting.Off);
         InstanceSetLayerMask(RotateGizmoInstance[3], Layers);
         InstanceGeometrySetFlag(RotateGizmoInstance[3], InstanceFlags.IgnoreOcclusionCulling, true);
@@ -338,7 +340,7 @@ public partial class Gizmo3D : Node3D
                 nivec * 0.01f + ivec * GIZMO_ARROW_OFFSET,
                 nivec * 0.01f + ivec * GIZMO_ARROW_OFFSET,
                 nivec * 0.12f + ivec * GIZMO_ARROW_OFFSET,
-                nivec * 0.0f + ivec * (GIZMO_ARROW_OFFSET + GIZMO_ARROW_SIZE),
+                nivec * 0.0f + ivec * (GIZMO_ARROW_OFFSET + GIZMO_ARROW_SIZE)
             };
 
             int arrowSides = 16;
@@ -353,7 +355,7 @@ public partial class Gizmo3D : Node3D
                         maa * arrow[j],
                         mbb * arrow[j],
                         mbb * arrow[j + 1],
-                        maa * arrow[j + 1],
+                        maa * arrow[j + 1]
                     };
                     surfTool.AddVertex(apoints[0]);
                     surfTool.AddVertex(apoints[1]);
@@ -384,7 +386,7 @@ public partial class Gizmo3D : Node3D
                 ma * plane[0],
                 ma * plane[1],
                 ma * plane[2],
-                ma * plane[3],
+                ma * plane[3]
             };
             surfTool.AddVertex(points[0]);
             surfTool.AddVertex(points[1]);
@@ -402,10 +404,10 @@ public partial class Gizmo3D : Node3D
                 CullMode = BaseMaterial3D.CullModeEnum.Disabled
             };
             planeMat.SetOnTopOfAlpha();
-            PlaneGizmoColor[i] = planeMat; // needed, so we can draw planes from both sides
+            PlaneGizmoColor[i] = planeMat;
             surfTool.SetMaterial(planeMat);
             surfTool.Commit(MovePlaneGizmo[i]);
-            PlaneGizmoColorHl[i] = (StandardMaterial3D) planeMat.Duplicate(); // needed, so we can draw planes from both sides
+            PlaneGizmoColorHl[i] = (StandardMaterial3D) planeMat.Duplicate();
 #endregion
 #region Rotation
             surfTool = new();
@@ -551,7 +553,7 @@ void fragment() {
                     nivec * 0.01f + ivec * 1.0f * GIZMO_SCALE_OFFSET,
                     nivec * 0.07f + ivec * 1.0f * GIZMO_SCALE_OFFSET,
                     nivec * 0.07f + ivec * 1.2f * GIZMO_SCALE_OFFSET,
-                    nivec * 0.0f + ivec * 1.2f * GIZMO_SCALE_OFFSET,
+                    nivec * 0.0f + ivec * 1.2f * GIZMO_SCALE_OFFSET
                 };
 
                 arrowSides = 4;
@@ -566,7 +568,7 @@ void fragment() {
                             maa * arrow[j],
                             mbb * arrow[j],
                             mbb * arrow[j + 1],
-                            maa * arrow[j + 1],
+                            maa * arrow[j + 1]
                         };
                         surfTool.AddVertex(apoints[0]);
                         surfTool.AddVertex(apoints[1]);
@@ -599,7 +601,7 @@ void fragment() {
                     ma * plane[0],
                     ma * plane[1],
                     ma * plane[2],
-                    ma * plane[3],
+                    ma * plane[3]
                 };
                 surfTool.AddVertex(points[0]);
                 surfTool.AddVertex(points[1]);
@@ -617,11 +619,11 @@ void fragment() {
                     CullMode = BaseMaterial3D.CullModeEnum.Disabled
                 };
                 planeMat.SetOnTopOfAlpha();
-                PlaneGizmoColor[i] = planeMat; // needed, so we can draw planes from both sides
+                PlaneGizmoColor[i] = planeMat;
                 surfTool.SetMaterial(planeMat);
                 surfTool.Commit(ScalePlaneGizmo[i]);
 
-                PlaneGizmoColorHl[i] = (StandardMaterial3D) planeMat.Duplicate(); // needed, so we can draw planes from both sides
+                PlaneGizmoColorHl[i] = (StandardMaterial3D) planeMat.Duplicate();
 #endregion
 #region Lines to visualize transforms locked to an axis/plane
                 surfTool = new SurfaceTool();
@@ -730,26 +732,26 @@ void fragment() {
 
         // Selection box
         Transform3D t = Target.GlobalTransform;
-        Transform3D t_offset = Target.GlobalTransform;
+        Transform3D tOffset = Target.GlobalTransform;
         Aabb bounds = CalculateSpatialBounds(Target);
 
         Vector3 offset = new(0.005f, 0.005f, 0.005f);
-        Basis aabb_s = Basis.FromScale(bounds.Size + offset);
+        Basis aabbS = Basis.FromScale(bounds.Size + offset);
         t = t.TranslatedLocal(bounds.Position - offset / 2);
-        t.Basis *= aabb_s;
+        t.Basis *= aabbS;
 
         offset = new(0.01f, 0.01f, 0.01f);
-        aabb_s = Basis.FromScale(bounds.Size + offset);
-        t_offset = t_offset.TranslatedLocal(bounds.Position - offset / 2);
-        t_offset.Basis *= aabb_s;
+        aabbS = Basis.FromScale(bounds.Size + offset);
+        tOffset = tOffset.TranslatedLocal(bounds.Position - offset / 2);
+        tOffset.Basis *= aabbS;
 
         InstanceSetTransform(SboxInstance, t);
         InstanceSetVisible(SboxInstance, ShowSelectionBox);
-        InstanceSetTransform(SboxInstanceOffset, t_offset);
+        InstanceSetTransform(SboxInstanceOffset, tOffset);
         InstanceSetVisible(SboxInstanceOffset, ShowSelectionBox);
         InstanceSetTransform(SboxXrayInstance, t);
         InstanceSetVisible(SboxXrayInstance, ShowSelectionBox);
-        InstanceSetTransform(SboxXrayInstanceOffset, t_offset);
+        InstanceSetTransform(SboxXrayInstanceOffset, tOffset);
         InstanceSetVisible(SboxXrayInstanceOffset, ShowSelectionBox);
     }
 
@@ -805,15 +807,14 @@ void fragment() {
         });
         SelectionBox = st.Commit();
 
-        StandardMaterial3D matXray = new()
+        stXray.SetMaterial(SelectionBoxXrayMat = new()
         {
             ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
             DisableFog = true,
             NoDepthTest = true,
             AlbedoColor = SelectionBoxColor * new Color(1, 1, 1, 0.15f),
             Transparency = BaseMaterial3D.TransparencyEnum.Alpha
-        };
-        stXray.SetMaterial(matXray);
+        });
         SelectionBoxXray = stXray.Commit();
 #endregion
 #region Instances
@@ -912,7 +913,7 @@ void fragment() {
                         float dist = r.Value.DistanceTo(grabberPos);
                         // Allow some tolerance to make the plane easier to click,
                         // even if the click is actually slightly outside the plane.
-                        if (dist < (GizmoScale * GIZMO_PLANE_SIZE * 1.5f))
+                        if (dist < GizmoScale * GIZMO_PLANE_SIZE * 1.5f)
                         {
                             float d = rayPos.DistanceTo(r.Value);
                             if (d < colD) {
@@ -934,7 +935,7 @@ void fragment() {
                 }
                 else
                 {
-                    //handle plane translate
+                    // handle plane translate
                     Edit.Mode = TransformMode.Translate;
                     ComputeEdit(screenpos);
                     Edit.Plane = TransformPlane.X + colAxis + (isPlaneTranslate ? 3 : 0);
