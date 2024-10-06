@@ -26,15 +26,17 @@ environment = SubResource("Environment_nlrnx")
 transform = Transform3D(0.838671, 0.221525, -0.497553, 0, 0.913545, 0.406737, 0.544639, -0.341118, 0.766164, -2.5, 1.5, 0)
 shadow_enabled = true
 
+[node name="Gizmo3D" type="Node3D" parent="." node_paths=PackedStringArray("Target")]
+script = ExtResource("2_wmj12")
+Target = NodePath("../Objects/coin")
+
+[node name="Selector" type="Node3D" parent="."]
+
 [node name="Camera" type="Camera3D" parent="." node_paths=PackedStringArray("Gizmo", "Message")]
 transform = Transform3D(1, 0, 0, 0, 0.866025, 0.5, 0, -0.5, 0.866025, 0, 1, 2)
 script = ExtResource("2_125yw")
 Gizmo = NodePath("../Gizmo3D")
 Message = NodePath("../UI/Message")
-
-[node name="Gizmo3D" type="Node3D" parent="." node_paths=PackedStringArray("Target")]
-script = ExtResource("2_wmj12")
-Target = NodePath("../Objects/coin")
 
 [node name="Objects" type="Node3D" parent="."]
 
@@ -91,6 +93,10 @@ text = "Move: WASD"
 [node name="Look" type="Label" parent="UI/Controls/PanelContainer/MarginContainer/VBoxContainer"]
 layout_mode = 2
 text = "Look: RMB"
+
+[node name="Select" type="Label" parent="UI/Controls/PanelContainer/MarginContainer/VBoxContainer"]
+layout_mode = 2
+text = "Select: LMB"
 
 [node name="Gizmo" type="Label" parent="UI/Controls/PanelContainer/MarginContainer/VBoxContainer"]
 layout_mode = 2

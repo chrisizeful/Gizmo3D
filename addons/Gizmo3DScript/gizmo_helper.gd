@@ -7,46 +7,46 @@ static func set_on_top_of_alpha(material : BaseMaterial3D):
 	material.no_depth_test = true
 
 static func get_edge(aabb : AABB, p_edge : int, r_from : Vector3, r_to : Vector3) -> Array:
-	var result = [];
+	var result := [2]
 	var position = aabb.position
 	var size = aabb.size
 	match (p_edge):
 		0:
-			result.append(Vector3(position.X + size.X, position.Y, position.Z))
-			result.append(Vector3(position.X, position.Y, position.Z))
+			result[0] = (Vector3(position.X + size.X, position.Y, position.Z))
+			result[1] = (Vector3(position.X, position.Y, position.Z))
 		1:
-			result.append(Vector3(position.X + size.X, position.Y, position.Z + size.Z))
-			result.append(Vector3(position.X + size.X, position.Y, position.Z))
+			result[0] = (Vector3(position.X + size.X, position.Y, position.Z + size.Z))
+			result[1] = (Vector3(position.X + size.X, position.Y, position.Z))
 		2:
-			result.append(Vector3(position.X, position.Y, position.Z + size.Z))
-			result.append(Vector3(position.X + size.X, position.Y, position.Z + size.Z))
+			result[0] = (Vector3(position.X, position.Y, position.Z + size.Z))
+			result[1] = (Vector3(position.X + size.X, position.Y, position.Z + size.Z))
 		3:
-			result.append(Vector3(position.X, position.Y, position.Z))
-			result.append(Vector3(position.X, position.Y, position.Z + size.Z))
+			result[0] = (Vector3(position.X, position.Y, position.Z))
+			result[1] = (Vector3(position.X, position.Y, position.Z + size.Z))
 		4:
-			result.append(Vector3(position.X, position.Y + size.Y, position.Z))
-			result.append(Vector3(position.X + size.X, position.Y + size.Y, position.Z))
+			result[0] = (Vector3(position.X, position.Y + size.Y, position.Z))
+			result[1] = (Vector3(position.X + size.X, position.Y + size.Y, position.Z))
 		5:
-			result.append(Vector3(position.X + size.X, position.Y + size.Y, position.Z))
-			result.append(Vector3(position.X + size.X, position.Y + size.Y, position.Z + size.Z))
+			result[0] = (Vector3(position.X + size.X, position.Y + size.Y, position.Z))
+			result[1] = (Vector3(position.X + size.X, position.Y + size.Y, position.Z + size.Z))
 		6:
-			result.append(Vector3(position.X + size.X, position.Y + size.Y, position.Z + size.Z))
-			result.append(Vector3(position.X, position.Y + size.Y, position.Z + size.Z))
+			result[0] = (Vector3(position.X + size.X, position.Y + size.Y, position.Z + size.Z))
+			result[1] = (Vector3(position.X, position.Y + size.Y, position.Z + size.Z))
 		7:
-			result.append(Vector3(position.X, position.Y + size.Y, position.Z + size.Z))
-			result.append(Vector3(position.X, position.Y + size.Y, position.Z))
+			result[0] = (Vector3(position.X, position.Y + size.Y, position.Z + size.Z))
+			result[1] = (Vector3(position.X, position.Y + size.Y, position.Z))
 		8:
-			result.append(Vector3(position.X, position.Y, position.Z + size.Z))
-			result.append(Vector3(position.X, position.Y + size.Y, position.Z + size.Z))
+			result[0] = (Vector3(position.X, position.Y, position.Z + size.Z))
+			result[1] = (Vector3(position.X, position.Y + size.Y, position.Z + size.Z))
 		9:
-			result.append(Vector3(position.X, position.Y, position.Z))
-			result.append(Vector3(position.X, position.Y + size.Y, position.Z))
+			result[0] = (Vector3(position.X, position.Y, position.Z))
+			result[1] = (Vector3(position.X, position.Y + size.Y, position.Z))
 		10:
-			result.append(Vector3(position.X + size.X, position.Y, position.Z))
-			result.append(Vector3(position.X + size.X, position.Y + size.Y, position.Z))
+			result[0] = (Vector3(position.X + size.X, position.Y, position.Z))
+			result[1] = (Vector3(position.X + size.X, position.Y + size.Y, position.Z))
 		11:
-			result.append(Vector3(position.X + size.X, position.Y, position.Z + size.Z))
-			result.append(Vector3(position.X + size.X, position.Y + size.Y, position.Z + size.Z))
+			result[0] = (Vector3(position.X + size.X, position.Y, position.Z + size.Z))
+			result[1] = (Vector3(position.X + size.X, position.Y + size.Y, position.Z + size.Z))
 	return result;
 
 static func scaled_orthogonal(basis : Basis, scale : Vector3) -> Basis:

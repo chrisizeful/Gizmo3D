@@ -64,11 +64,13 @@ public partial class Gizmo3D : Node3D
     }
 
     [ExportGroup("Style")]
-    [Export]
+    [Export(PropertyHint.Range, "30,200")]
     public float Size { get; set; } = 80.0f;
     [Export]
     public bool ShowAxes { get; set; } = true;
-    
+    [Export]
+    public bool ShowSelectionBox { get; set; } = true;
+
     float opacity = .9f;
     [Export(PropertyHint.Range, "0,1")]
     public float Opacity
@@ -145,6 +147,8 @@ public partial class Gizmo3D : Node3D
 
     ArrayMesh SelectionBox, SelectionBoxXray;
     StandardMaterial3D SelectionBoxMat;
+    Rid SboxInstance, SboxInstanceOffset;
+    Rid SboxXrayInstance, SboxXrayInstanceOffset;
 
     EditData Edit = new();
     float GizmoScale = 1.0f;
@@ -153,7 +157,8 @@ public partial class Gizmo3D : Node3D
     enum TransformMode { None, Rotate, Translate, Scale };
     enum TransformPlane { View, X, Y, Z, YZ, XZ, XY, };
 
-    struct EditData {
+    struct EditData
+    {
         public Transform3D TargetOriginal, TargetGlobal;
         public TransformMode Mode;
         public TransformPlane Plane;
@@ -722,6 +727,30 @@ void fragment() {
         xform.Basis *= xform.Basis.Scaled(scale);
         InstanceSetTransform(RotateGizmoInstance[3], xform);
         InstanceSetVisible(RotateGizmoInstance[3], Mode == ToolMode.All || Mode == ToolMode.Rotate);
+
+        // Selection box
+        Transform3D t = Target.GlobalTransform;
+        Transform3D t_offset = Target.GlobalTransform;
+        Aabb bounds = CalculateSpatialBounds(Target);
+
+        Vector3 offset = new(0.005f, 0.005f, 0.005f);
+        Basis aabb_s = Basis.FromScale(bounds.Size + offset);
+        t = t.TranslatedLocal(bounds.Position - offset / 2);
+        t.Basis *= aabb_s;
+
+        offset = new(0.01f, 0.01f, 0.01f);
+        aabb_s = Basis.FromScale(bounds.Size + offset);
+        t_offset = t_offset.TranslatedLocal(bounds.Position - offset / 2);
+        t_offset.Basis *= aabb_s;
+
+        InstanceSetTransform(SboxInstance, t);
+        InstanceSetVisible(SboxInstance, ShowSelectionBox);
+        InstanceSetTransform(SboxInstanceOffset, t_offset);
+        InstanceSetVisible(SboxInstanceOffset, ShowSelectionBox);
+        InstanceSetTransform(SboxXrayInstance, t);
+        InstanceSetVisible(SboxXrayInstance, ShowSelectionBox);
+        InstanceSetTransform(SboxXrayInstanceOffset, t_offset);
+        InstanceSetVisible(SboxXrayInstanceOffset, ShowSelectionBox);
     }
 
     void SetVisibility(bool visible)
@@ -737,10 +766,16 @@ void fragment() {
         }
         // Rotation white outline
         InstanceSetVisible(RotateGizmoInstance[3], visible);
+
+        InstanceSetVisible(SboxInstance, visible);
+        InstanceSetVisible(SboxInstanceOffset, visible);
+        InstanceSetVisible(SboxXrayInstance, visible);
+        InstanceSetVisible(SboxXrayInstanceOffset, visible);
     }
 
     void GenerateSelectionBoxes()
     {
+#region Meshes
         // Use two AABBs to create the illusion of a slightly thicker line.
         Aabb aabb = new(new(), Vector3.One);
 
@@ -780,6 +815,29 @@ void fragment() {
         };
         stXray.SetMaterial(matXray);
         SelectionBoxXray = stXray.Commit();
+#endregion
+#region Instances
+        SboxInstance = InstanceCreate2(SelectionBox.GetRid(), GetWorld3D().Scenario);
+        SboxInstanceOffset = InstanceCreate2(SelectionBox.GetRid(), GetWorld3D().Scenario);
+        InstanceGeometrySetCastShadowsSetting(SboxInstance, ShadowCastingSetting.Off);
+        InstanceGeometrySetCastShadowsSetting(SboxInstanceOffset, ShadowCastingSetting.Off);
+        InstanceSetLayerMask(SboxInstance, Layers);
+        InstanceSetLayerMask(SboxInstanceOffset, Layers);
+        InstanceGeometrySetFlag(SboxInstance, InstanceFlags.IgnoreOcclusionCulling, true);
+        InstanceGeometrySetFlag(SboxInstance, InstanceFlags.UseBakedLight, false);
+        InstanceGeometrySetFlag(SboxInstanceOffset, InstanceFlags.IgnoreOcclusionCulling, true);
+        InstanceGeometrySetFlag(SboxInstanceOffset, InstanceFlags.UseBakedLight, false);
+        SboxXrayInstance = InstanceCreate2(SelectionBoxXray.GetRid(), GetWorld3D().Scenario);
+        SboxXrayInstanceOffset = InstanceCreate2(SelectionBoxXray.GetRid(), GetWorld3D().Scenario);
+        InstanceGeometrySetCastShadowsSetting(SboxXrayInstance, ShadowCastingSetting.Off);
+        InstanceGeometrySetCastShadowsSetting(SboxXrayInstanceOffset, ShadowCastingSetting.Off);
+        InstanceSetLayerMask(SboxXrayInstance, Layers);
+        InstanceSetLayerMask(SboxXrayInstanceOffset, Layers);
+        InstanceGeometrySetFlag(SboxXrayInstance, InstanceFlags.IgnoreOcclusionCulling, true);
+        InstanceGeometrySetFlag(SboxXrayInstance, InstanceFlags.UseBakedLight, false);
+        InstanceGeometrySetFlag(SboxXrayInstanceOffset, InstanceFlags.IgnoreOcclusionCulling, true);
+        InstanceGeometrySetFlag(SboxXrayInstanceOffset, InstanceFlags.UseBakedLight, false);
+#endregion
     }
 
     void SelectGizmoHighlightAxis(int axis)
@@ -1341,6 +1399,41 @@ void fragment() {
         Edit.ClickRayPos = GetRayPos(point);
         Edit.Plane = TransformPlane.View;
         Edit.Center = Transform.Origin;
+    }
+
+    Aabb CalculateSpatialBounds(Node3D parent, bool omitTopLevel = false, Transform3D boundsOrientation = default)
+    {
+	    Aabb bounds;
+
+        Transform3D tBoundsOrientation;
+        if (boundsOrientation != default)
+            tBoundsOrientation = boundsOrientation;
+        else
+            tBoundsOrientation = parent.GlobalTransform;
+
+        if (parent == null)
+            return new Aabb(new(-0.2f, -0.2f, -0.2f), new(0.4f, 0.4f, 0.4f));
+
+        Transform3D xfomToTopLevelParentSpace = tBoundsOrientation.AffineInverse() * parent.GlobalTransform;
+
+        if (parent is VisualInstance3D vi)
+            bounds = vi.GetAabb();
+        else
+            bounds = new();
+        bounds = xfomToTopLevelParentSpace * bounds;
+
+        foreach (Node child in parent.GetChildren())
+        {
+            if (child is not Node3D n3d)
+                continue;
+            if (!(omitTopLevel && n3d.TopLevel))
+            {
+                Aabb child_bounds = CalculateSpatialBounds(n3d, omitTopLevel, tBoundsOrientation);
+                bounds = bounds.Merge(child_bounds);
+            }
+        }
+
+        return bounds;
     }
 
     Vector3 GetRayPos(Vector2 pos) => GetViewport().GetCamera3D().ProjectRayOrigin(pos);

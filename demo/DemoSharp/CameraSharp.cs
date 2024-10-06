@@ -29,7 +29,7 @@ public partial class CameraSharp : Camera3D
 		Message.Text = Gizmo.Message;
     }
 
-    public override void _Input(InputEvent @event)
+    public override void _UnhandledInput(InputEvent @event)
     {
         if (@event is InputEventMouseButton button && button.ButtonIndex == MouseButton.Right)
 		{

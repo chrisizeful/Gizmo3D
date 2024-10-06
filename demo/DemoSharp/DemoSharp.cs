@@ -8,7 +8,7 @@ public partial class DemoSharp : Node3D
 	[Export]
 	public Gizmo3D Gizmo { get; private set; }
 
-    public override void _Input(InputEvent @event)
+    public override void _UnhandledInput(InputEvent @event)
     {
         if (@event is InputEventMouseButton button && button.ButtonIndex == MouseButton.Left && button.Pressed)
 		{
@@ -22,7 +22,7 @@ public partial class DemoSharp : Node3D
 			});
 			if (result.Count == 0)
 				return;
-			Node3D collider = (Node3D) result["collider"];
+			Node collider = (Node) result["collider"];
 			Gizmo.Target = collider.GetParent<Node3D>();
 		}
     }
