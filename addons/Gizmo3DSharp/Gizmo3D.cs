@@ -49,24 +49,69 @@ public partial class Gizmo3D : Node3D
     [Export]
     public Node3D Target { get; set; }
     public bool Snapping { get; private set; }
-    public bool Editing { get; private set; }
     public string Message { get; private set; }
+
+    bool editing;
+    public bool Editing
+    {
+        get => editing;
+        private set
+        {
+            editing = value;
+            if (!value)
+                Message = "";
+        }
+    }
 
     [ExportGroup("Style")]
     [Export]
     public float Size { get; set; } = 80.0f;
     [Export]
     public bool ShowAxes { get; set; } = true;
+    
+    float opacity = .9f;
     [Export(PropertyHint.Range, "0,1")]
-    public float Opacity { get; set; } = .9f;
+    public float Opacity
+    {
+        get => opacity;
+        set
+        {
+            if (IsNodeReady())
+                SetColors();
+            opacity = value;
+        }
+    }
+
+    Color[] colors = new Color[]
+    {
+        new(0.96f, 0.20f, 0.32f),
+        new(0.53f, 0.84f, 0.01f),
+        new(0.16f, 0.55f, 0.96f)
+    };
     [Export(PropertyHint.ColorNoAlpha)]
-    public Color AxisXColor { get; set; } = new(0.96f, 0.20f, 0.32f);
+    public Color[] Colors
+    {
+        get => colors;
+        set
+        {
+            if (IsNodeReady())
+                SetColors();
+            colors = value;
+        }
+    }
+
+    Color selectionBoxColor = new(1.0f, 0.5f, 0);
     [Export(PropertyHint.ColorNoAlpha)]
-    public Color AxisYColor { get; set; } = new(0.53f, 0.84f, 0.01f);
-    [Export(PropertyHint.ColorNoAlpha)]
-    public Color AxisZColor { get; set; } = new(0.16f, 0.55f, 0.96f);
-    [Export(PropertyHint.ColorNoAlpha)]
-    public Color SelectionBoxColor { get; set; } = new(1.0f, 0.5f, 0);
+    public Color SelectionBoxColor
+    {
+        get => selectionBoxColor;
+        set
+        {
+            if (IsNodeReady())
+                SelectionBoxMat.AlbedoColor = value;
+            selectionBoxColor = value;
+        }
+    }
 
     [ExportGroup("Position")]
     [Export(PropertyHint.None, "Test")]
@@ -86,7 +131,7 @@ public partial class Gizmo3D : Node3D
     ArrayMesh[] AxisGizmo = new ArrayMesh[3];
     StandardMaterial3D[] GizmoColor = new StandardMaterial3D[3];
 	StandardMaterial3D[] PlaneGizmoColor = new StandardMaterial3D[3];
-	ShaderMaterial[] RotateGizmoColor = new ShaderMaterial[3];
+	ShaderMaterial[] RotateGizmoColor = new ShaderMaterial[4];
 	StandardMaterial3D[] GizmoColorHl = new StandardMaterial3D[3];
 	StandardMaterial3D[] PlaneGizmoColorHl = new StandardMaterial3D[3];
 	ShaderMaterial[] RotateGizmoColorHl = new ShaderMaterial[3];
@@ -98,10 +143,11 @@ public partial class Gizmo3D : Node3D
     Rid[] ScalePlaneGizmoInstance = new Rid[3];
     Rid[] AxisGizmoInstance = new Rid[3];
 
-    ArrayMesh selectionBox, selectionBoxXray;
+    ArrayMesh SelectionBox, SelectionBoxXray;
+    StandardMaterial3D SelectionBoxMat;
 
-    EditData edit = new();
-    float gizmoScale = 1.0f;
+    EditData Edit = new();
+    float GizmoScale = 1.0f;
 
     public enum ToolMode { All, Move, Rotate, Scale };
     enum TransformMode { None, Rotate, Translate, Scale };
@@ -119,12 +165,13 @@ public partial class Gizmo3D : Node3D
     public override void _Ready()
     {
         InitIndicators();
+        SetColors();
         InitGizmoInstance();
         UpdateTransformGizmoView();
         VisibilityChanged += () => SetVisibility(Visible);
     }
 
-    public override void _Input(InputEvent @event)
+    public override void _UnhandledInput(InputEvent @event)
     {
         if (!Visible)
         {
@@ -140,14 +187,14 @@ public partial class Gizmo3D : Node3D
             Editing = button.Pressed;
             if (!Editing)
                 return;
-            edit.MousePos = button.Position;
+            Edit.MousePos = button.Position;
             Editing = TransformGizmoSelect(button.Position);
         }
         else if (@event is InputEventMouseMotion motion)
         {
             if (Editing && motion.ButtonMask.HasFlag(MouseButtonMask.Left))
             {
-                edit.MousePos = motion.Position;
+                Edit.MousePos = motion.Position;
                 UpdateTransform(false);
                 return;
             }
@@ -258,24 +305,6 @@ public partial class Gizmo3D : Node3D
 
         for (int i = 0; i < 3; i++)
         {
-            Color col;
-            switch (i)
-            {
-                case 0:
-                    col = AxisXColor;
-                    break;
-                case 1:
-                    col = AxisYColor;
-                    break;
-                case 2:
-                    col = AxisZColor;
-                    break;
-                default:
-                    col = new();
-                    break;
-            }
-            col.A = Opacity;
-
             MoveGizmo[i] = new ArrayMesh();
             MovePlaneGizmo[i] = new ArrayMesh();
             RotateGizmo[i] = new ArrayMesh();
@@ -288,16 +317,11 @@ public partial class Gizmo3D : Node3D
                 ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
                 DisableFog = true,
                 Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
-                AlbedoColor = col,
                 CullMode = BaseMaterial3D.CullModeEnum.Disabled
             };
             mat.SetOnTopOfAlpha();
             GizmoColor[i] = mat;
-
-            StandardMaterial3D matHl = (StandardMaterial3D) mat.Duplicate();
-            Color albedo = Color.FromHsv(col.H, 0.25f, 1.0f, 1.0f);
-            matHl.AlbedoColor = albedo;
-            GizmoColorHl[i] = matHl;
+            GizmoColorHl[i] = (StandardMaterial3D) mat.Duplicate();
 #region Translate
             SurfaceTool surfTool = new();
             surfTool.Begin(Mesh.PrimitiveType.Triangles);
@@ -370,17 +394,13 @@ public partial class Gizmo3D : Node3D
                 ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
                 DisableFog = true,
                 Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
-                CullMode = BaseMaterial3D.CullModeEnum.Disabled,
-                AlbedoColor = col
+                CullMode = BaseMaterial3D.CullModeEnum.Disabled
             };
             planeMat.SetOnTopOfAlpha();
             PlaneGizmoColor[i] = planeMat; // needed, so we can draw planes from both sides
             surfTool.SetMaterial(planeMat);
             surfTool.Commit(MovePlaneGizmo[i]);
-
-            StandardMaterial3D planeMatHl = (StandardMaterial3D) planeMat.Duplicate();
-            planeMatHl.AlbedoColor = albedo;
-            PlaneGizmoColorHl[i] = planeMatHl; // needed, so we can draw planes from both sides
+            PlaneGizmoColorHl[i] = (StandardMaterial3D) planeMat.Duplicate(); // needed, so we can draw planes from both sides
 #endregion
 #region Rotation
             surfTool = new();
@@ -460,16 +480,13 @@ void fragment() {
                 RenderPriority = (int) Material.RenderPriorityMax,
                 Shader = rotateShader
             };
-            rotateMat.SetShaderParameter("albedo", col);
             RotateGizmoColor[i] = rotateMat;
 
             var arrays = surfTool.CommitToArrays();
             RotateGizmo[i].AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
             RotateGizmo[i].SurfaceSetMaterial(0, rotateMat);
 
-            ShaderMaterial rotateMatHl = (ShaderMaterial) rotateMat.Duplicate();
-            rotateMatHl.SetShaderParameter("albedo", albedo);
-            RotateGizmoColorHl[i] = rotateMatHl;
+            RotateGizmoColorHl[i] = (ShaderMaterial) rotateMat.Duplicate();
 
             if (i == 2) // Rotation white outline
             {
@@ -511,7 +528,7 @@ void fragment() {
                     };
 
                     borderMat.Shader = borderShader;
-                    borderMat.SetShaderParameter("albedo", new Color(0.75f, 0.75f, 0.75f, col.A / 3.0f));
+                    RotateGizmoColor[3] = borderMat;
 
                     RotateGizmo[3] = new ArrayMesh();
                     RotateGizmo[3].AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
@@ -592,17 +609,14 @@ void fragment() {
                     ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
                     DisableFog = true,
                     Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
-                    CullMode = BaseMaterial3D.CullModeEnum.Disabled,
-                    AlbedoColor = col
+                    CullMode = BaseMaterial3D.CullModeEnum.Disabled
                 };
                 planeMat.SetOnTopOfAlpha();
                 PlaneGizmoColor[i] = planeMat; // needed, so we can draw planes from both sides
                 surfTool.SetMaterial(planeMat);
                 surfTool.Commit(ScalePlaneGizmo[i]);
 
-                planeMatHl = (StandardMaterial3D) planeMat.Duplicate();
-                planeMatHl.AlbedoColor = Color.FromHsv(col.H, 0.25f, 1.0f, 1.0f);
-                PlaneGizmoColorHl[i] = planeMatHl; // needed, so we can draw planes from both sides
+                PlaneGizmoColorHl[i] = (StandardMaterial3D) planeMat.Duplicate(); // needed, so we can draw planes from both sides
 #endregion
 #region Lines to visualize transforms locked to an axis/plane
                 surfTool = new SurfaceTool();
@@ -614,12 +628,29 @@ void fragment() {
                 surfTool.AddVertex(vec * -1048576);
                 surfTool.AddVertex(new());
                 surfTool.AddVertex(vec * 1048576);
-                surfTool.SetMaterial(matHl);
+                surfTool.SetMaterial(GizmoColorHl[i]);
                 surfTool.Commit(AxisGizmo[i]);
         }
 #endregion
 #endregion
 	    GenerateSelectionBoxes();
+    }
+
+    void SetColors()
+    {
+        for (int i = 0; i < 3; i++)
+        {
+            Color col = new(colors[i], colors[i].A * Opacity);
+            GizmoColor[i].AlbedoColor = col;
+            PlaneGizmoColor[i].AlbedoColor = col;
+            RotateGizmoColor[i].SetShaderParameter("albedo", col);
+
+            Color albedo = Color.FromHsv(col.H, 0.25f, 1.0f, 1.0f);
+            GizmoColorHl[i].AlbedoColor = albedo;
+            PlaneGizmoColorHl[i].AlbedoColor = albedo;
+            RotateGizmoColorHl[i].SetShaderParameter("albedo", albedo);
+        }
+        RotateGizmoColor[3].SetShaderParameter("albedo", new Color(0.75f, 0.75f, 0.75f, Opacity / 3.0f));
     }
 
     void UpdateTransformGizmoView()
@@ -648,8 +679,8 @@ void fragment() {
         float d1 = camera.UnprojectPosition(cameraTransform.Origin + camz * gizmoD + camy).Y;
         float dd = Mathf.Max(Mathf.Abs(d0 - d1), Mathf.Epsilon);
 
-        gizmoScale = Size / Mathf.Abs(dd);
-        Vector3 scale = Vector3.One * gizmoScale;
+        GizmoScale = Size / Mathf.Abs(dd);
+        Vector3 scale = Vector3.One * GizmoScale;
 
         // if the determinant is zero, we should disable the gizmo from being rendered
         // this prevents supplying bad values to the renderer and then having to filter it out again
@@ -682,9 +713,9 @@ void fragment() {
         }
 
         bool showAxes = ShowAxes && Editing;
-        InstanceSetVisible(AxisGizmoInstance[0], showAxes && (edit.Plane == TransformPlane.X || edit.Plane == TransformPlane.XY || edit.Plane == TransformPlane.XZ));
-        InstanceSetVisible(AxisGizmoInstance[1], showAxes && (edit.Plane == TransformPlane.Y || edit.Plane == TransformPlane.XY || edit.Plane == TransformPlane.YZ));
-        InstanceSetVisible(AxisGizmoInstance[2], showAxes && (edit.Plane == TransformPlane.Z || edit.Plane == TransformPlane.XZ || edit.Plane == TransformPlane.YZ));
+        InstanceSetVisible(AxisGizmoInstance[0], showAxes && (Edit.Plane == TransformPlane.X || Edit.Plane == TransformPlane.XY || Edit.Plane == TransformPlane.XZ));
+        InstanceSetVisible(AxisGizmoInstance[1], showAxes && (Edit.Plane == TransformPlane.Y || Edit.Plane == TransformPlane.XY || Edit.Plane == TransformPlane.YZ));
+        InstanceSetVisible(AxisGizmoInstance[2], showAxes && (Edit.Plane == TransformPlane.Z || Edit.Plane == TransformPlane.XZ || Edit.Plane == TransformPlane.YZ));
 
         // Rotation white outline
         xform = xform.Orthonormalized();
@@ -730,15 +761,14 @@ void fragment() {
             stXray.AddVertex(b);
         }
 
-        StandardMaterial3D mat = new()
+        st.SetMaterial(SelectionBoxMat = new()
         {
             ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
             DisableFog = true,
             AlbedoColor = SelectionBoxColor,
             Transparency = BaseMaterial3D.TransparencyEnum.Alpha
-        };
-        st.SetMaterial(mat);
-        selectionBox = st.Commit();
+        });
+        SelectionBox = st.Commit();
 
         StandardMaterial3D matXray = new()
         {
@@ -749,7 +779,7 @@ void fragment() {
             Transparency = BaseMaterial3D.TransparencyEnum.Alpha
         };
         stXray.SetMaterial(matXray);
-        selectionBoxXray = stXray.Commit();
+        SelectionBoxXray = stXray.Commit();
     }
 
     void SelectGizmoHighlightAxis(int axis)
@@ -786,8 +816,8 @@ void fragment() {
 
             for (int i = 0; i < 3; i++)
             {
-                Vector3 grabberPos = gt.Origin + gt.Basis[i].Normalized() * gizmoScale * (GIZMO_ARROW_OFFSET + (GIZMO_ARROW_SIZE * 0.5f));
-                float grabberRadius = gizmoScale * GIZMO_ARROW_SIZE;
+                Vector3 grabberPos = gt.Origin + gt.Basis[i].Normalized() * GizmoScale * (GIZMO_ARROW_OFFSET + (GIZMO_ARROW_SIZE * 0.5f));
+                float grabberRadius = GizmoScale * GIZMO_ARROW_SIZE;
 
                 Vector3[] r = Geometry3D.SegmentIntersectsSphere(rayPos, rayPos + ray * MAX_Z, grabberPos, grabberRadius);
                 if (r.Length != 0)
@@ -814,7 +844,7 @@ void fragment() {
 
                     // Allow some tolerance to make the plane easier to click,
                     // even if the click is actually slightly outside the plane.
-                    Vector3 grabberPos = gt.Origin + (ivec2 + ivec3) * gizmoScale * (GIZMO_PLANE_SIZE + GIZMO_PLANE_DST * 0.6667f);
+                    Vector3 grabberPos = gt.Origin + (ivec2 + ivec3) * GizmoScale * (GIZMO_PLANE_SIZE + GIZMO_PLANE_DST * 0.6667f);
 
                     Plane plane = new(gt.Basis[i].Normalized(), gt.Origin);
                     Vector3? r = plane.IntersectsRay(rayPos, ray);
@@ -824,7 +854,7 @@ void fragment() {
                         float dist = r.Value.DistanceTo(grabberPos);
                         // Allow some tolerance to make the plane easier to click,
                         // even if the click is actually slightly outside the plane.
-                        if (dist < (gizmoScale * GIZMO_PLANE_SIZE * 1.5f))
+                        if (dist < (GizmoScale * GIZMO_PLANE_SIZE * 1.5f))
                         {
                             float d = rayPos.DistanceTo(r.Value);
                             if (d < colD) {
@@ -847,9 +877,9 @@ void fragment() {
                 else
                 {
                     //handle plane translate
-                    edit.Mode = TransformMode.Translate;
+                    Edit.Mode = TransformMode.Translate;
                     ComputeEdit(screenpos);
-                    edit.Plane = TransformPlane.X + colAxis + (isPlaneTranslate ? 3 : 0);
+                    Edit.Plane = TransformPlane.X + colAxis + (isPlaneTranslate ? 3 : 0);
                 }
                 return true;
             }
@@ -859,8 +889,8 @@ void fragment() {
         {
             int colAxis = -1;
 
-            float rayLength = gt.Origin.DistanceTo(rayPos) + (GIZMO_CIRCLE_SIZE * gizmoScale) * 4.0f;
-            Vector3[] result = Geometry3D.SegmentIntersectsSphere(rayPos, rayPos + ray * rayLength, gt.Origin, gizmoScale * GIZMO_CIRCLE_SIZE);
+            float rayLength = gt.Origin.DistanceTo(rayPos) + (GIZMO_CIRCLE_SIZE * GizmoScale) * 4.0f;
+            Vector3[] result = Geometry3D.SegmentIntersectsSphere(rayPos, rayPos + ray * rayLength, gt.Origin, GizmoScale * GIZMO_CIRCLE_SIZE);
             if (result.Length != 0)
             {
                 Vector3 hitPosition = result[0];
@@ -869,7 +899,7 @@ void fragment() {
                 {
                     hitPosition = (hitPosition * gt).Abs();
                     int minAxis = (int) hitPosition.MinAxisIndex();
-                    if (hitPosition[minAxis] < gizmoScale * GIZMO_RING_HALF_WIDTH)
+                    if (hitPosition[minAxis] < GizmoScale * GIZMO_RING_HALF_WIDTH)
                         colAxis = minAxis;
                 }
             }
@@ -889,7 +919,7 @@ void fragment() {
                     Vector3 rDir = (r.Value - gt.Origin).Normalized();
 
                     if (GetCameraNormal().Dot(rDir) <= 0.005f) {
-                        if (dist > gizmoScale * (GIZMO_CIRCLE_SIZE - GIZMO_RING_HALF_WIDTH) && dist < gizmoScale * (GIZMO_CIRCLE_SIZE + GIZMO_RING_HALF_WIDTH))
+                        if (dist > GizmoScale * (GIZMO_CIRCLE_SIZE - GIZMO_RING_HALF_WIDTH) && dist < GizmoScale * (GIZMO_CIRCLE_SIZE + GIZMO_RING_HALF_WIDTH))
                         {
                             float d = rayPos.DistanceTo(r.Value);
                             if (d < colD)
@@ -911,9 +941,9 @@ void fragment() {
                 else
                 {
                     //handle rotate
-                    edit.Mode = TransformMode.Rotate;
+                    Edit.Mode = TransformMode.Rotate;
                     ComputeEdit(screenpos);
-                    edit.Plane = TransformPlane.X + colAxis;
+                    Edit.Plane = TransformPlane.X + colAxis;
                 }
                 return true;
             }
@@ -925,8 +955,8 @@ void fragment() {
             float colD = 1e20F;
 
             for (int i = 0; i < 3; i++) {
-                Vector3 grabberPos = gt.Origin + gt.Basis[i].Normalized() * gizmoScale * GIZMO_SCALE_OFFSET;
-                float grabberRadius = gizmoScale * GIZMO_ARROW_SIZE;
+                Vector3 grabberPos = gt.Origin + gt.Basis[i].Normalized() * GizmoScale * GIZMO_SCALE_OFFSET;
+                float grabberRadius = GizmoScale * GIZMO_ARROW_SIZE;
 
                 Vector3[] r = Geometry3D.SegmentIntersectsSphere(rayPos, rayPos + ray * MAX_Z, grabberPos, grabberRadius);
                 if (r.Length != 0)
@@ -953,7 +983,7 @@ void fragment() {
 
                     // Allow some tolerance to make the plane easier to click,
                     // even if the click is actually slightly outside the plane.
-                    Vector3 grabberPos = gt.Origin + (ivec2 + ivec3) * gizmoScale * (GIZMO_PLANE_SIZE + GIZMO_PLANE_DST * 0.6667f);
+                    Vector3 grabberPos = gt.Origin + (ivec2 + ivec3) * GizmoScale * (GIZMO_PLANE_SIZE + GIZMO_PLANE_DST * 0.6667f);
 
                     Plane plane = new(gt.Basis[i].Normalized(), gt.Origin);
                     Vector3? r = plane.IntersectsRay(rayPos, ray);
@@ -963,7 +993,7 @@ void fragment() {
                         float dist = r.Value.DistanceTo(grabberPos);
                         // Allow some tolerance to make the plane easier to click,
                         // even if the click is actually slightly outside the plane.
-                        if (dist < (gizmoScale * GIZMO_PLANE_SIZE * 1.5f))
+                        if (dist < (GizmoScale * GIZMO_PLANE_SIZE * 1.5f))
                         {
                             float d = rayPos.DistanceTo(r.Value);
                             if (d < colD)
@@ -987,9 +1017,9 @@ void fragment() {
                 else
                 {
                     //handle scale
-                    edit.Mode = TransformMode.Scale;
+                    Edit.Mode = TransformMode.Scale;
                     ComputeEdit(screenpos);
-                    edit.Plane = TransformPlane.X + colAxis + (isPlaneScale ? 3 : 0);
+                    Edit.Plane = TransformPlane.X + colAxis + (isPlaneScale ? 3 : 0);
                 }
                 return true;
             }
@@ -1024,7 +1054,7 @@ void fragment() {
                 else
                 {
                     s.Basis = s.Basis.Scaled(motion + new Vector3(1, 1, 1));
-                    Transform3D @base = new(Basis.Identity, edit.Center);
+                    Transform3D @base = new(Basis.Identity, Edit.Center);
                     s = @base * (s * (@base.Inverse() * original));
                     // Recalculate orthogonalized scale without moving origin.
                     if (orthogonal)
@@ -1050,7 +1080,7 @@ void fragment() {
                     Basis blocal = original.Basis * originalLocal.Basis.Inverse();
                     Vector3 axis = motion * blocal;
                     r.Basis = blocal * new Basis(axis.Normalized(), extra) * originalLocal.Basis;
-                    r.Origin = new Basis(motion, extra) * (original.Origin - edit.Center) + edit.Center;
+                    r.Origin = new Basis(motion, extra) * (original.Origin - Edit.Center) + Edit.Center;
                 }
                 return r;
             default:
@@ -1061,48 +1091,48 @@ void fragment() {
 
     void UpdateTransform(bool shift)
     {
-        Vector3 rayPos = GetRayPos(edit.MousePos);
-        Vector3 ray = GetRay(edit.MousePos);
+        Vector3 rayPos = GetRayPos(Edit.MousePos);
+        Vector3 ray = GetRay(Edit.MousePos);
         float snap = DEFAULT_FLOAT_STEP;
 
-        switch (edit.Mode)
+        switch (Edit.Mode)
         {
             case TransformMode.Scale:
                 Vector3 smotionMask = Vector3.Zero;
                 Plane splane = Godot.Plane.PlaneXY;
                 bool splaneMv = false;
 
-                switch (edit.Plane)
+                switch (Edit.Plane)
                 {
                     case TransformPlane.View:
                         smotionMask = Vector3.Zero;
-                        splane = new(GetCameraNormal(), edit.Center);
+                        splane = new(GetCameraNormal(), Edit.Center);
                         break;
                     case TransformPlane.X:
                         smotionMask = Transform.Basis[0].Normalized();
-                        splane = new(smotionMask.Cross(smotionMask.Cross(GetCameraNormal())).Normalized(), edit.Center);
+                        splane = new(smotionMask.Cross(smotionMask.Cross(GetCameraNormal())).Normalized(), Edit.Center);
                         break;
                     case TransformPlane.Y:
                         smotionMask = Transform.Basis[1].Normalized();
-                        splane = new(smotionMask.Cross(smotionMask.Cross(GetCameraNormal())).Normalized(), edit.Center);
+                        splane = new(smotionMask.Cross(smotionMask.Cross(GetCameraNormal())).Normalized(), Edit.Center);
                         break;
                     case TransformPlane.Z:
                         smotionMask = Transform.Basis[2].Normalized();
-                        splane = new(smotionMask.Cross(smotionMask.Cross(GetCameraNormal())).Normalized(), edit.Center);
+                        splane = new(smotionMask.Cross(smotionMask.Cross(GetCameraNormal())).Normalized(), Edit.Center);
                         break;
                     case TransformPlane.YZ:
                         smotionMask = Transform.Basis[2].Normalized() + Transform.Basis[1].Normalized();
-                        splane = new(Transform.Basis[0].Normalized(), edit.Center);
+                        splane = new(Transform.Basis[0].Normalized(), Edit.Center);
                         splaneMv = true;
                         break;
                     case TransformPlane.XZ:
                         smotionMask = Transform.Basis[2].Normalized() + Transform.Basis[0].Normalized();
-                        splane = new(Transform.Basis[1].Normalized(), edit.Center);
+                        splane = new(Transform.Basis[1].Normalized(), Edit.Center);
                         splaneMv = true;
                         break;
                     case TransformPlane.XY:
                         smotionMask = Transform.Basis[0].Normalized() + Transform.Basis[1].Normalized();
-                        splane = new(Transform.Basis[2].Normalized(), edit.Center);
+                        splane = new(Transform.Basis[2].Normalized(), Edit.Center);
                         splaneMv = true;
                         break;
                 }
@@ -1111,12 +1141,12 @@ void fragment() {
                 if (sintersection == null)
                     break;
 
-                Vector3? sclick = splane.IntersectsRay(edit.ClickRayPos, edit.ClickRay);
+                Vector3? sclick = splane.IntersectsRay(Edit.ClickRayPos, Edit.ClickRay);
                 if (sclick == null)
                     break;
 
                 Vector3 smotion = sintersection.Value - sclick.Value;
-                if (edit.Plane != TransformPlane.View)
+                if (Edit.Plane != TransformPlane.View)
                 {
                     if (!splaneMv)
                         smotion = smotionMask.Dot(smotion) * smotionMask;
@@ -1124,18 +1154,18 @@ void fragment() {
                         smotion = smotionMask.Dot(smotion) * smotionMask;
 
                 } else {
-                    float centerClickDist = sclick.Value.DistanceTo(edit.Center);
-                    float centerIntersDist = sintersection.Value.DistanceTo(edit.Center);
+                    float centerClickDist = sclick.Value.DistanceTo(Edit.Center);
+                    float centerIntersDist = sintersection.Value.DistanceTo(Edit.Center);
                     if (centerClickDist == 0)
                         break;
                     float scale = centerIntersDist - centerClickDist;
                     smotion = new(scale, scale, scale);
                 }
 
-                smotion /= sclick.Value.DistanceTo(edit.Center);
+                smotion /= sclick.Value.DistanceTo(Edit.Center);
 
                 // Disable local transformation for TRANSFORM_VIEW
-                bool slocalCoords = LocalCoords && edit.Plane != TransformPlane.View;
+                bool slocalCoords = LocalCoords && Edit.Plane != TransformPlane.View;
 
                 if (Snapping)
                     snap = ScaleSnap;
@@ -1144,7 +1174,7 @@ void fragment() {
                 smotionSnapped = smotionSnapped.Snapped(snap);
                 Message = TranslationServer.Translate("Scaling") + $": ({smotionSnapped.X:0.###}, {smotionSnapped.Y:0.###}, {smotionSnapped.Z:0.###})";
                 if (slocalCoords)
-                    smotion = edit.TargetOriginal.Basis.Inverse() * smotion; // TODO: needed?
+                    smotion = Edit.TargetOriginal.Basis.Inverse() * smotion; // TODO: needed?
 
                 ApplyTransform(smotion, snap);
                 break;
@@ -1154,33 +1184,33 @@ void fragment() {
                 Plane tplane = Godot.Plane.PlaneXY;
                 bool tplaneMv = false;
 
-                switch (edit.Plane)
+                switch (Edit.Plane)
                 {
                     case TransformPlane.View:
-                        tplane = new(GetCameraNormal(), edit.Center);
+                        tplane = new(GetCameraNormal(), Edit.Center);
                         break;
                     case TransformPlane.X:
                         tmotionMask = Transform.Basis[0].Normalized();
-                        tplane = new(tmotionMask.Cross(tmotionMask.Cross(GetCameraNormal())).Normalized(), edit.Center);
+                        tplane = new(tmotionMask.Cross(tmotionMask.Cross(GetCameraNormal())).Normalized(), Edit.Center);
                         break;
                     case TransformPlane.Y:
                         tmotionMask = Transform.Basis[1].Normalized();
-                        tplane = new(tmotionMask.Cross(tmotionMask.Cross(GetCameraNormal())).Normalized(), edit.Center);
+                        tplane = new(tmotionMask.Cross(tmotionMask.Cross(GetCameraNormal())).Normalized(), Edit.Center);
                         break;
                     case TransformPlane.Z:
                         tmotionMask = Transform.Basis[2].Normalized();
-                        tplane = new(tmotionMask.Cross(tmotionMask.Cross(GetCameraNormal())).Normalized(), edit.Center);
+                        tplane = new(tmotionMask.Cross(tmotionMask.Cross(GetCameraNormal())).Normalized(), Edit.Center);
                         break;
                     case TransformPlane.YZ:
-                        tplane = new(Transform.Basis[0].Normalized(), edit.Center);
+                        tplane = new(Transform.Basis[0].Normalized(), Edit.Center);
                         tplaneMv = true;
                         break;
                     case TransformPlane.XZ:
-                        tplane = new(Transform.Basis[1].Normalized(), edit.Center);
+                        tplane = new(Transform.Basis[1].Normalized(), Edit.Center);
                         tplaneMv = true;
                         break;
                     case TransformPlane.XY:
-                        tplane = new(Transform.Basis[2].Normalized(), edit.Center);
+                        tplane = new(Transform.Basis[2].Normalized(), Edit.Center);
                         tplaneMv = true;
                         break;
                 }
@@ -1189,16 +1219,16 @@ void fragment() {
                 if (tintersection == null)
                     break;
 
-                Vector3? tclick = tplane.IntersectsRay(edit.ClickRayPos, edit.ClickRay);
+                Vector3? tclick = tplane.IntersectsRay(Edit.ClickRayPos, Edit.ClickRay);
                 if (tclick == null)
                     break;
 
                 Vector3 tmotion = tintersection.Value - tclick.Value;
-                if (edit.Plane != TransformPlane.View && !tplaneMv)
+                if (Edit.Plane != TransformPlane.View && !tplaneMv)
                     tmotion = tmotionMask.Dot(tmotion) * tmotionMask;
 
                 // Disable local transformation for TRANSFORM_VIEW
-                bool tlocalCoords = LocalCoords && edit.Plane != TransformPlane.View;
+                bool tlocalCoords = LocalCoords && Edit.Plane != TransformPlane.View;
 
                 if (Snapping)
                     snap = TranslateSnap;
@@ -1217,20 +1247,20 @@ void fragment() {
                 Camera3D camera = GetViewport().GetCamera3D();
                 if (camera.Projection == Camera3D.ProjectionType.Perspective)
                 {
-                    Vector3 camToObj = edit.Center - camera.GlobalTransform.Origin;
+                    Vector3 camToObj = Edit.Center - camera.GlobalTransform.Origin;
                     if (!camToObj.IsZeroApprox())
-                        rplane = new(camToObj.Normalized(), edit.Center);
+                        rplane = new(camToObj.Normalized(), Edit.Center);
                     else
-                        rplane = new(GetCameraNormal(), edit.Center);
+                        rplane = new(GetCameraNormal(), Edit.Center);
                 }
                 else
                 {
-                    rplane = new(GetCameraNormal(), edit.Center);
+                    rplane = new(GetCameraNormal(), Edit.Center);
                 }
 
                 Vector3 localAxis = Vector3.Zero;
                 Vector3 globalAxis = Vector3.Zero;
-                switch (edit.Plane)
+                switch (Edit.Plane)
                 {
                     case TransformPlane.View:
                         // localAxis unused
@@ -1251,14 +1281,14 @@ void fragment() {
                         break;
                 }
 
-                if (edit.Plane != TransformPlane.View)
+                if (Edit.Plane != TransformPlane.View)
                     globalAxis = (Transform.Basis * localAxis).Normalized();
 
                 Vector3? rintersection = rplane.IntersectsRay(rayPos, ray);
                 if (rintersection == null)
                     break;
 
-                Vector3? rclick = rplane.IntersectsRay(edit.ClickRayPos, edit.ClickRay);
+                Vector3? rclick = rplane.IntersectsRay(Edit.ClickRayPos, Edit.ClickRay);
                 if (rclick == null)
                     break;
 
@@ -1271,12 +1301,12 @@ void fragment() {
                     Vector3 projectionAxis = rplane.Normal.Cross(globalAxis);
                     Vector3 delta = rintersection.Value - rclick.Value;
                     float projection = delta.Dot(projectionAxis);
-                    angle = (projection * (Mathf.Pi / 2.0f)) / (gizmoScale * GIZMO_CIRCLE_SIZE);
+                    angle = (projection * (Mathf.Pi / 2.0f)) / (GizmoScale * GIZMO_CIRCLE_SIZE);
                 }
                 else
                 {
-                    Vector3 clickAxis = (rclick.Value - edit.Center).Normalized();
-                    Vector3 currentAxis = (rintersection.Value - edit.Center).Normalized();
+                    Vector3 clickAxis = (rclick.Value - Edit.Center).Normalized();
+                    Vector3 currentAxis = (rintersection.Value - Edit.Center).Normalized();
                     angle = clickAxis.SignedAngleTo(currentAxis, globalAxis);
                 }
 
@@ -1287,7 +1317,7 @@ void fragment() {
                 Message = TranslationServer.Translate("Rotating") + $": {angle:0.###} " + TranslationServer.Translate("degrees");
                 angle = Mathf.DegToRad(angle);
 
-                bool rlocalCoords = LocalCoords && edit.Plane != TransformPlane.View; // Disable local transformation for TRANSFORM_VIEW
+                bool rlocalCoords = LocalCoords && Edit.Plane != TransformPlane.View; // Disable local transformation for TRANSFORM_VIEW
                 Vector3 computeAxis = rlocalCoords ? localAxis : globalAxis;
                 ApplyTransform(computeAxis, angle);
                 break;
@@ -1298,19 +1328,19 @@ void fragment() {
 
     void ApplyTransform(Vector3 motion, float snap)
     {
-        bool localCoords = LocalCoords && edit.Plane != TransformPlane.View;
-        Transform3D newTransform = ComputeTransform(edit.Mode, edit.TargetGlobal, edit.TargetOriginal, motion, snap, localCoords, edit.Plane != TransformPlane.View);
+        bool localCoords = LocalCoords && Edit.Plane != TransformPlane.View;
+        Transform3D newTransform = ComputeTransform(Edit.Mode, Edit.TargetGlobal, Edit.TargetOriginal, motion, snap, localCoords, Edit.Plane != TransformPlane.View);
         TransformGizmoApply(Target, newTransform, localCoords);
     }
 
     void ComputeEdit(Vector2 point)
     {
-        edit.TargetGlobal = Target.GlobalTransform;
-        edit.TargetOriginal = Target.Transform;
-        edit.ClickRay = GetRay(point);
-        edit.ClickRayPos = GetRayPos(point);
-        edit.Plane = TransformPlane.View;
-        edit.Center = Transform.Origin;
+        Edit.TargetGlobal = Target.GlobalTransform;
+        Edit.TargetOriginal = Target.Transform;
+        Edit.ClickRay = GetRay(point);
+        Edit.ClickRayPos = GetRayPos(point);
+        Edit.Plane = TransformPlane.View;
+        Edit.Center = Transform.Origin;
     }
 
     Vector3 GetRayPos(Vector2 pos) => GetViewport().GetCamera3D().ProjectRayOrigin(pos);

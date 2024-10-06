@@ -1,5 +1,7 @@
 using Godot;
 
+namespace Gizmo3DPlugin;
+
 public partial class Camera : Camera3D
 {
 
@@ -9,18 +11,32 @@ public partial class Camera : Camera3D
 	readonly StringName left = "move_left", right = "move_right";
 	readonly StringName forward = "move_forward", backward = "move_backward";
 
+	[Export]
+	public Gizmo3D Gizmo { get; private set; }
+	[Export]
+	public Label Message { get; private set; }
+
 	public override void _Process(double delta)
 	{
 		Vector2 input = Input.GetVector(left, right, forward, backward);
 		Vector3 move = (Basis * new Vector3(input.X, 0, input.Y)).Normalized();
 		Position += move * MOVE_SPEED * (float) delta;
-	}
+
+		Message.Visible = Gizmo.Editing;
+		if (!Gizmo.Editing)
+			return;
+		Message.Position = GetViewport().GetMousePosition() + new Vector2(16, 16);
+		Message.Text = Gizmo.Message;
+    }
 
     public override void _Input(InputEvent @event)
     {
         if (@event is InputEventMouseButton button && button.ButtonIndex == MouseButton.Right)
+		{
 			Input.MouseMode = button.Pressed ? Input.MouseModeEnum.Captured : Input.MouseModeEnum.Visible;
-		if (@event is InputEventMouseMotion motion && Input.MouseMode == Input.MouseModeEnum.Captured)
+			Gizmo.SetProcessUnhandledInput(!button.Pressed);
+		}
+		else if (@event is InputEventMouseMotion motion && Input.MouseMode == Input.MouseModeEnum.Captured)
 		{
             float pitch = Mathf.Clamp(motion.Relative.Y * MOUSE_SENS, -90, 90);
             RotateY(Mathf.DegToRad(-motion.Relative.X * MOUSE_SENS));
