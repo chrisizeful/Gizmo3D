@@ -2,7 +2,7 @@ using Godot;
 
 namespace Gizmo3DPlugin;
 
-public partial class Camera : Camera3D
+public partial class CameraSharp : Camera3D
 {
 
 	const float MOVE_SPEED = 20.0f;

@@ -114,7 +114,7 @@ public partial class Gizmo3D : Node3D
     }
 
     [ExportGroup("Position")]
-    [Export(PropertyHint.None, "Test")]
+    [Export]
     public bool LocalCoords { get; set; }
     [Export(PropertyHint.Range, "0,360")]
     public float RotateSnap { get; set; } = 15.0f;
