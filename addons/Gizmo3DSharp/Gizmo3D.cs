@@ -730,28 +730,34 @@ void fragment() {
         InstanceSetVisible(RotateGizmoInstance[3], Mode == ToolMode.All || Mode == ToolMode.Rotate);
 
         // Selection box
-        Transform3D t = Target.GlobalTransform;
-        Transform3D tOffset = Target.GlobalTransform;
-        Aabb bounds = CalculateSpatialBounds(Target);
+        Transform3D t = Transform3D.Identity;
+        Transform3D tOffset = Transform3D.Identity;
+        if (Target != null)
+        {
+            t = Target.GlobalTransform;
+            tOffset = Target.GlobalTransform;
+            Aabb bounds = CalculateSpatialBounds(Target);
 
-        Vector3 offset = new(0.005f, 0.005f, 0.005f);
-        Basis aabbS = Basis.FromScale(bounds.Size + offset);
-        t = t.TranslatedLocal(bounds.Position - offset / 2);
-        t.Basis *= aabbS;
+            Vector3 offset = new(0.005f, 0.005f, 0.005f);
+            Basis aabbS = Basis.FromScale(bounds.Size + offset);
+            t = t.TranslatedLocal(bounds.Position - offset / 2);
+            t.Basis *= aabbS;
 
-        offset = new(0.01f, 0.01f, 0.01f);
-        aabbS = Basis.FromScale(bounds.Size + offset);
-        tOffset = tOffset.TranslatedLocal(bounds.Position - offset / 2);
-        tOffset.Basis *= aabbS;
+            offset = new(0.01f, 0.01f, 0.01f);
+            aabbS = Basis.FromScale(bounds.Size + offset);
+            tOffset = tOffset.TranslatedLocal(bounds.Position - offset / 2);
+            tOffset.Basis *= aabbS;
+        }
 
+        bool showSelection = ShowSelectionBox && Target != null;
         InstanceSetTransform(SboxInstance, t);
-        InstanceSetVisible(SboxInstance, ShowSelectionBox);
+        InstanceSetVisible(SboxInstance, showSelection);
         InstanceSetTransform(SboxInstanceOffset, tOffset);
-        InstanceSetVisible(SboxInstanceOffset, ShowSelectionBox);
+        InstanceSetVisible(SboxInstanceOffset, showSelection);
         InstanceSetTransform(SboxXrayInstance, t);
-        InstanceSetVisible(SboxXrayInstance, ShowSelectionBox);
+        InstanceSetVisible(SboxXrayInstance, showSelection);
         InstanceSetTransform(SboxXrayInstanceOffset, tOffset);
-        InstanceSetVisible(SboxXrayInstanceOffset, ShowSelectionBox);
+        InstanceSetVisible(SboxXrayInstanceOffset, showSelection);
     }
 
     void SetVisibility(bool visible)

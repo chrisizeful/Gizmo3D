@@ -18,8 +18,8 @@ const GIZMO_ARROW_OFFSET := GIZMO_CIRCLE_SIZE + .15
 @export
 var mode := ToolMode.ALL
 
-var _layers := 1
 @export_flags_3d_render
+var _layers := 1
 var layers: int:
 	get:
 		return _layers
@@ -58,8 +58,8 @@ var show_axes := true
 @export
 var show_selection_box := true
 
-var _opacity := .9
 @export
+var _opacity := .9
 var opacity: float:
 	get:
 		return _opacity
@@ -68,12 +68,12 @@ var opacity: float:
 			_set_colors()
 		_opacity = value
 
+@export
 var _colors : Array[Color] = [
 	Color(0.96, 0.20, 0.32),
 	Color(0.53, 0.84, 0.01),
 	Color(0.16, 0.55, 0.96)
 ]
-@export
 var colors: Array[Color]:
 	get:
 		return _colors
@@ -82,15 +82,15 @@ var colors: Array[Color]:
 			_set_colors()
 		_colors = value
 
-var _selection_box_color := Color(1.0, .5, 0)
 @export
+var _selection_box_color := Color(1.0, .5, 0)
 var selection_box_color: Color:
 	get:
 		return _selection_box_color
 	set(value):
 		if is_node_ready():
-			_selection_box_mat.albedo_color = value
-			_selection_box_xray_mat.albedo_color = value
+			_selection_box_mat.albedo_color = Color(value, value.a * opacity)
+			_selection_box_xray_mat.albedo_color = Color(value, value.a * opacity)
 		_selection_box_color = value
 
 @export_group("Position")
@@ -159,12 +159,16 @@ func _ready() -> void:
 	_scale_gizmo_instance.resize(3)
 	_scale_plane_gizmo_instance.resize(3)
 	_axis_gizmo_instance.resize(3)
-
+	
 	_init_indicators()
 	_set_colors()
 	_init_gizmo_instance()
 	_update_transform_gizmo_view()
 	visibility_changed.connect(func(): _set_visibility(visible))
+	
+	layers = _layers
+	colors = _colors
+	selection_box_color = _selection_box_color
 
 func _unhandled_input(event: InputEvent) -> void:
 	if !visible:
@@ -643,28 +647,32 @@ func _update_transform_gizmo_view() -> void:
 	RenderingServer.instance_set_visible(_rotate_gizmo_instance[3], mode == ToolMode.ALL || mode == ToolMode.ROTATE)
 	
 	# Selection box
-	var t := target.global_transform
-	var t_offset := target.global_transform
-	var bounds := _calculate_spatial_bounds(target)
+	var t := Transform3D.IDENTITY
+	var t_offset := Transform3D.IDENTITY
+	if target != null:
+		t = target.global_transform
+		t_offset = target.global_transform
+		var bounds := _calculate_spatial_bounds(target)
+		
+		var offset := Vector3(0.005, 0.005, 0.005)
+		var aabb_s := Basis.from_scale(bounds.size + offset)
+		t = t.translated_local(bounds.position - offset / 2)
+		t.basis *= aabb_s
+		
+		offset = Vector3(0.01, 0.01, 0.01);
+		aabb_s = Basis.from_scale(bounds.size + offset);
+		t_offset = t_offset.translated_local(bounds.position - offset / 2);
+		t_offset.basis *= aabb_s;
 	
-	var offset := Vector3(0.005, 0.005, 0.005)
-	var aabb_s := Basis.from_scale(bounds.size + offset)
-	t = t.translated_local(bounds.position - offset / 2)
-	t.basis *= aabb_s
-	
-	offset = Vector3(0.01, 0.01, 0.01);
-	aabb_s = Basis.from_scale(bounds.size + offset);
-	t_offset = t_offset.translated_local(bounds.position - offset / 2);
-	t_offset.basis *= aabb_s;
-	
+	var show_selection := show_selection_box and target != null
 	RenderingServer.instance_set_transform(_sbox_instance, t)
-	RenderingServer.instance_set_visible(_sbox_instance, show_selection_box)
+	RenderingServer.instance_set_visible(_sbox_instance, show_selection)
 	RenderingServer.instance_set_transform(_sbox_instance_offset, t_offset)
-	RenderingServer.instance_set_visible(_sbox_instance_offset, show_selection_box)
+	RenderingServer.instance_set_visible(_sbox_instance_offset, show_selection)
 	RenderingServer.instance_set_transform(_sbox_xray_instance, t)
-	RenderingServer.instance_set_visible(_sbox_xray_instance, show_selection_box)
+	RenderingServer.instance_set_visible(_sbox_xray_instance, show_selection)
 	RenderingServer.instance_set_transform(_sbox_xray_instance_offset, t_offset)
-	RenderingServer.instance_set_visible(_sbox_xray_instance_offset, show_selection_box)
+	RenderingServer.instance_set_visible(_sbox_xray_instance_offset, show_selection)
 
 func _set_visibility(visible : bool) -> void:
 	for i in range(3):
@@ -709,13 +717,13 @@ func _generate_selection_boxes():
 	st.set_material(_selection_box_mat)
 	_selection_box = st.commit()
 	
-	_selection_box_mat = StandardMaterial3D.new()
-	_selection_box_mat.shading_mode =BaseMaterial3D.SHADING_MODE_UNSHADED
-	_selection_box_mat.disable_fog = true
-	_selection_box_mat.no_depth_test = true
-	_selection_box_mat.albedo_color = selection_box_color * Color(1, 1, 1, .15)
-	_selection_box_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	st_xray.set_material(_selection_box_mat)
+	_selection_box_xray_mat = StandardMaterial3D.new()
+	_selection_box_xray_mat.shading_mode =BaseMaterial3D.SHADING_MODE_UNSHADED
+	_selection_box_xray_mat.disable_fog = true
+	_selection_box_xray_mat.no_depth_test = true
+	_selection_box_xray_mat.albedo_color = selection_box_color * Color(1, 1, 1, .15)
+	_selection_box_xray_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	st_xray.set_material(_selection_box_xray_mat)
 	_selection_box_xray = st.commit()
 	
 	# Instances
