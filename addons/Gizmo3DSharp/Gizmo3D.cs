@@ -421,7 +421,8 @@ public partial class Gizmo3D : Node3D
             {
                 Basis basis = new(ivec, j * step);
                 Vector3 vertex = basis * (ivec2 * GIZMO_CIRCLE_SIZE);
-                for (int k = 0; k < CIRCLE_SEGMENT_THICKNESS; ++k) {
+                for (int k = 0; k < CIRCLE_SEGMENT_THICKNESS; ++k)
+                {
                     Vector2 ofs = new(Mathf.Cos((Mathf.Tau * k) / CIRCLE_SEGMENT_THICKNESS), Mathf.Sin((Mathf.Tau * k) / CIRCLE_SEGMENT_THICKNESS));
                     Vector3 normal = ivec * ofs.X + ivec2 * ofs.Y;
                     surfTool.SetNormal(basis * normal);
@@ -706,10 +707,8 @@ void fragment() {
             axisAngle.Origin = xform.Origin;
             InstanceSetTransform(MoveGizmoInstance[i], axisAngle);
             InstanceSetVisible(MoveGizmoInstance[i], Mode == ToolMode.All || Mode == ToolMode.Move);
-            InstanceSetVisible(MoveGizmoInstance[i], true);
             InstanceSetTransform(MovePlaneGizmoInstance[i], axisAngle);
             InstanceSetVisible(MovePlaneGizmoInstance[i], Mode == ToolMode.All || Mode == ToolMode.Move);
-            InstanceSetVisible(MovePlaneGizmoInstance[i], true);
             InstanceSetTransform(RotateGizmoInstance[i], axisAngle);
             InstanceSetVisible(RotateGizmoInstance[i], Mode == ToolMode.All || Mode == ToolMode.Rotate);
             InstanceSetTransform(ScaleGizmoInstance[i], axisAngle);
@@ -843,7 +842,8 @@ void fragment() {
 
     void SelectGizmoHighlightAxis(int axis)
     {
-        for (int i = 0; i < 3; i++) {
+        for (int i = 0; i < 3; i++)
+        {
             MoveGizmo[i].SurfaceSetMaterial(0, i == axis ? GizmoColorHl[i] : GizmoColor[i]);
             MovePlaneGizmo[i].SurfaceSetMaterial(0, (i + 6) == axis ? PlaneGizmoColorHl[i] : PlaneGizmoColor[i]);
             RotateGizmo[i].SurfaceSetMaterial(0, (i + 3) == axis ? RotateGizmoColorHl[i] : RotateGizmoColor[i]);
@@ -916,7 +916,8 @@ void fragment() {
                         if (dist < GizmoScale * GIZMO_PLANE_SIZE * 1.5f)
                         {
                             float d = rayPos.DistanceTo(r.Value);
-                            if (d < colD) {
+                            if (d < colD)
+                            {
                                 colD = d;
                                 colAxis = i;
 
@@ -977,7 +978,8 @@ void fragment() {
                     float dist = r.Value.DistanceTo(gt.Origin);
                     Vector3 rDir = (r.Value - gt.Origin).Normalized();
 
-                    if (GetCameraNormal().Dot(rDir) <= 0.005f) {
+                    if (GetCameraNormal().Dot(rDir) <= 0.005f)
+                    {
                         if (dist > GizmoScale * (GIZMO_CIRCLE_SIZE - GIZMO_RING_HALF_WIDTH) && dist < GizmoScale * (GIZMO_CIRCLE_SIZE + GIZMO_RING_HALF_WIDTH))
                         {
                             float d = rayPos.DistanceTo(r.Value);
@@ -999,7 +1001,7 @@ void fragment() {
                 }
                 else
                 {
-                    //handle rotate
+                    // handle rotate
                     Edit.Mode = TransformMode.Rotate;
                     ComputeEdit(screenpos);
                     Edit.Plane = TransformPlane.X + colAxis;
@@ -1013,7 +1015,8 @@ void fragment() {
             int colAxis = -1;
             float colD = 1e20F;
 
-            for (int i = 0; i < 3; i++) {
+            for (int i = 0; i < 3; i++)
+            {
                 Vector3 grabberPos = gt.Origin + gt.Basis[i].Normalized() * GizmoScale * GIZMO_SCALE_OFFSET;
                 float grabberRadius = GizmoScale * GIZMO_ARROW_SIZE;
 
@@ -1075,7 +1078,7 @@ void fragment() {
                 }
                 else
                 {
-                    //handle scale
+                    // handle scale
                     Edit.Mode = TransformMode.Scale;
                     ComputeEdit(screenpos);
                     Edit.Plane = TransformPlane.X + colAxis + (isPlaneScale ? 3 : 0);
@@ -1107,17 +1110,17 @@ void fragment() {
                 Transform3D s = Transform3D.Identity;
                 if (local)
                 {
-                    s.Basis = original.Basis * Basis.Scaled(motion + new Vector3(1, 1, 1));
+                    s.Basis = original.Basis * Basis.Scaled(motion + Vector3.One);
                     s.Origin = originalLocal.Origin;
                 }
                 else
                 {
-                    s.Basis = s.Basis.Scaled(motion + new Vector3(1, 1, 1));
+                    s.Basis = s.Basis.Scaled(motion + Vector3.One);
                     Transform3D @base = new(Basis.Identity, Edit.Center);
                     s = @base * (s * (@base.Inverse() * original));
                     // Recalculate orthogonalized scale without moving origin.
                     if (orthogonal)
-                        s.Basis = original.Basis.ScaledOrthogonal(motion + new Vector3(1, 1, 1));
+                        s.Basis = original.Basis.ScaledOrthogonal(motion + Vector3.One);
                 }
                 return s;
             case TransformMode.Translate:
@@ -1158,7 +1161,7 @@ void fragment() {
         {
             case TransformMode.Scale:
                 Vector3 smotionMask = Vector3.Zero;
-                Plane splane = Godot.Plane.PlaneXY;
+                Plane splane = Plane.PlaneXY;
                 bool splaneMv = false;
 
                 switch (Edit.Plane)
@@ -1211,7 +1214,6 @@ void fragment() {
                         smotion = smotionMask.Dot(smotion) * smotionMask;
                     else if (shift) // Alternative planar scaling mode
                         smotion = smotionMask.Dot(smotion) * smotionMask;
-
                 } else {
                     float centerClickDist = sclick.Value.DistanceTo(Edit.Center);
                     float centerIntersDist = sintersection.Value.DistanceTo(Edit.Center);
@@ -1229,18 +1231,17 @@ void fragment() {
                 if (Snapping)
                     snap = ScaleSnap;
 
-                Vector3 smotionSnapped = smotion;
-                smotionSnapped = smotionSnapped.Snapped(snap);
+                Vector3 smotionSnapped = smotion.Snapped(snap);
                 Message = TranslationServer.Translate("Scaling") + $": ({smotionSnapped.X:0.###}, {smotionSnapped.Y:0.###}, {smotionSnapped.Z:0.###})";
                 if (slocalCoords)
-                    smotion = Edit.TargetOriginal.Basis.Inverse() * smotion; // TODO: needed?
+                    smotion = Edit.TargetOriginal.Basis.Inverse() * smotion;
 
                 ApplyTransform(smotion, snap);
                 break;
 
             case TransformMode.Translate:
                 Vector3 tmotionMask = Vector3.Zero;
-                Plane tplane = Godot.Plane.PlaneXY;
+                Plane tplane = Plane.PlaneXY;
                 bool tplaneMv = false;
 
                 switch (Edit.Plane)
@@ -1292,8 +1293,7 @@ void fragment() {
                 if (Snapping)
                     snap = TranslateSnap;
 
-                Vector3 tmotionSnapped = tmotion;
-                tmotionSnapped = tmotionSnapped.Snapped(snap);
+                Vector3 tmotionSnapped = tmotion.Snapped(snap);
                 Message = TranslationServer.Translate("Translating") + $": ({tmotionSnapped.X:0.###}, {tmotionSnapped.Y:0.###}, {tmotionSnapped.Z:0.###})";
                 if (tlocalCoords)
                     tmotion = Transform.Basis.Inverse() * tmotion;

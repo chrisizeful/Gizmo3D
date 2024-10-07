@@ -7,51 +7,52 @@ static func set_on_top_of_alpha(material : BaseMaterial3D):
 	material.no_depth_test = true
 
 static func get_edge(aabb : AABB, p_edge : int) -> Array:
-	var result := [2]
+	var result : Array[Vector3] = []
+	result.resize(2)
 	var position = aabb.position
 	var size = aabb.size
 	match (p_edge):
 		0:
-			result[0] = (Vector3(position.X + size.X, position.Y, position.Z))
-			result[1] = (Vector3(position.X, position.Y, position.Z))
+			result[0] = (Vector3(position.x + size.x, position.y, position.z))
+			result[1] = (Vector3(position.x, position.y, position.z))
 		1:
-			result[0] = (Vector3(position.X + size.X, position.Y, position.Z + size.Z))
-			result[1] = (Vector3(position.X + size.X, position.Y, position.Z))
+			result[0] = (Vector3(position.x + size.x, position.y, position.z + size.z))
+			result[1] = (Vector3(position.x + size.x, position.y, position.z))
 		2:
-			result[0] = (Vector3(position.X, position.Y, position.Z + size.Z))
-			result[1] = (Vector3(position.X + size.X, position.Y, position.Z + size.Z))
+			result[0] = (Vector3(position.x, position.y, position.z + size.z))
+			result[1] = (Vector3(position.x + size.x, position.y, position.z + size.z))
 		3:
-			result[0] = (Vector3(position.X, position.Y, position.Z))
-			result[1] = (Vector3(position.X, position.Y, position.Z + size.Z))
+			result[0] = (Vector3(position.x, position.y, position.z))
+			result[1] = (Vector3(position.x, position.y, position.z + size.z))
 		4:
-			result[0] = (Vector3(position.X, position.Y + size.Y, position.Z))
-			result[1] = (Vector3(position.X + size.X, position.Y + size.Y, position.Z))
+			result[0] = (Vector3(position.x, position.y + size.y, position.z))
+			result[1] = (Vector3(position.x + size.x, position.y + size.y, position.z))
 		5:
-			result[0] = (Vector3(position.X + size.X, position.Y + size.Y, position.Z))
-			result[1] = (Vector3(position.X + size.X, position.Y + size.Y, position.Z + size.Z))
+			result[0] = (Vector3(position.x + size.x, position.y + size.y, position.z))
+			result[1] = (Vector3(position.x + size.x, position.y + size.y, position.z + size.z))
 		6:
-			result[0] = (Vector3(position.X + size.X, position.Y + size.Y, position.Z + size.Z))
-			result[1] = (Vector3(position.X, position.Y + size.Y, position.Z + size.Z))
+			result[0] = (Vector3(position.x + size.x, position.y + size.y, position.z + size.z))
+			result[1] = (Vector3(position.x, position.y + size.y, position.z + size.z))
 		7:
-			result[0] = (Vector3(position.X, position.Y + size.Y, position.Z + size.Z))
-			result[1] = (Vector3(position.X, position.Y + size.Y, position.Z))
+			result[0] = (Vector3(position.x, position.y + size.y, position.z + size.z))
+			result[1] = (Vector3(position.x, position.y + size.y, position.z))
 		8:
-			result[0] = (Vector3(position.X, position.Y, position.Z + size.Z))
-			result[1] = (Vector3(position.X, position.Y + size.Y, position.Z + size.Z))
+			result[0] = (Vector3(position.x, position.y, position.z + size.z))
+			result[1] = (Vector3(position.x, position.y + size.y, position.z + size.z))
 		9:
-			result[0] = (Vector3(position.X, position.Y, position.Z))
-			result[1] = (Vector3(position.X, position.Y + size.Y, position.Z))
+			result[0] = (Vector3(position.x, position.y, position.z))
+			result[1] = (Vector3(position.x, position.y + size.y, position.z))
 		10:
-			result[0] = (Vector3(position.X + size.X, position.Y, position.Z))
-			result[1] = (Vector3(position.X + size.X, position.Y + size.Y, position.Z))
+			result[0] = (Vector3(position.x + size.x, position.y, position.z))
+			result[1] = (Vector3(position.x + size.x, position.y + size.y, position.z))
 		11:
-			result[0] = (Vector3(position.X + size.X, position.Y, position.Z + size.Z))
-			result[1] = (Vector3(position.X + size.X, position.Y + size.Y, position.Z + size.Z))
+			result[0] = (Vector3(position.x + size.x, position.y, position.z + size.z))
+			result[1] = (Vector3(position.x + size.x, position.y + size.y, position.z + size.z))
 	return result;
 
 static func scaled_orthogonal(basis : Basis, scale : Vector3) -> Basis:
 	var s = Vector3(-1, -1, -1) + scale
-	var sign = (s.X + s.Y + s.Z) < 0
+	var sign = (s.x + s.y + s.z) < 0
 	var b = basis.orthonormalized()
 	s *= b
 	var dots = Vector3.ZERO
