@@ -111,8 +111,8 @@ public partial class Gizmo3D : Node3D
         {
             if (IsNodeReady())
             {
-                SelectionBoxMat.AlbedoColor = value;
-                SelectionBoxXrayMat.AlbedoColor = value * new Color(1, 1, 1, 0.15f);
+                SelectionBoxMat.AlbedoColor = new(value, value.A * Opacity);
+                SelectionBoxXrayMat.AlbedoColor = value * new Color(1, 1, 1, 0.15f * Opacity);
             }
             selectionBoxColor = value;
         }
@@ -326,7 +326,7 @@ public partial class Gizmo3D : Node3D
                 Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
                 CullMode = BaseMaterial3D.CullModeEnum.Disabled
             };
-            mat.SetOnTopOfAlpha();
+            mat.SetOnTopOfAlpha(true);
             GizmoColor[i] = mat;
             GizmoColorHl[i] = (StandardMaterial3D) mat.Duplicate();
 #region Translate
@@ -403,7 +403,7 @@ public partial class Gizmo3D : Node3D
                 Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
                 CullMode = BaseMaterial3D.CullModeEnum.Disabled
             };
-            planeMat.SetOnTopOfAlpha();
+            planeMat.SetOnTopOfAlpha(true);
             PlaneGizmoColor[i] = planeMat;
             surfTool.SetMaterial(planeMat);
             surfTool.Commit(MovePlaneGizmo[i]);
@@ -619,7 +619,7 @@ void fragment() {
                     Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
                     CullMode = BaseMaterial3D.CullModeEnum.Disabled
                 };
-                planeMat.SetOnTopOfAlpha();
+                planeMat.SetOnTopOfAlpha(true);
                 PlaneGizmoColor[i] = planeMat;
                 surfTool.SetMaterial(planeMat);
                 surfTool.Commit(ScalePlaneGizmo[i]);

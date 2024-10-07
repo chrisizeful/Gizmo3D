@@ -288,7 +288,7 @@ func _init_indicators() -> void:
 		mat.disable_fog = true
 		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 		mat.cull_mode = BaseMaterial3D.CULL_DISABLED
-		GizmoHelper.set_on_top_of_alpha(mat)
+		GizmoHelper.set_on_top_of_alpha(mat, true)
 		_gizmo_color[i] = mat
 		_gizmo_color_hl[i] = mat.duplicate()
 		
@@ -360,7 +360,7 @@ func _init_indicators() -> void:
 		plane_mat.disable_fog = true
 		plane_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 		plane_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
-		GizmoHelper.set_on_top_of_alpha(plane_mat)
+		GizmoHelper.set_on_top_of_alpha(plane_mat,true)
 		_plane_gizmo_color[i] = plane_mat
 		surfTool.set_material(plane_mat)
 		surfTool.commit(_move_plane_gizmo[i])
@@ -553,7 +553,7 @@ void fragment() {
 		plane_mat.disable_fog = true
 		plane_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 		plane_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
-		GizmoHelper.set_on_top_of_alpha(plane_mat)
+		GizmoHelper.set_on_top_of_alpha(plane_mat, true)
 		_plane_gizmo_color[i] = plane_mat
 		surfTool.set_material(plane_mat)
 		surfTool.commit(_scale_plane_gizmo[i])

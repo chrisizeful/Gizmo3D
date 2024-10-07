@@ -1,12 +1,15 @@
 class_name GizmoHelper;
 extends Node;
 
-static func set_on_top_of_alpha(material : BaseMaterial3D):
-	material.transparency = BaseMaterial3D.Transparency.TRANSPARENCY_DISABLED
+static func set_on_top_of_alpha(material: BaseMaterial3D, alpha: bool = false):
+	if alpha:
+		material.transparency = BaseMaterial3D.Transparency.TRANSPARENCY_ALPHA
+	else:
+		material.transparency = BaseMaterial3D.Transparency.TRANSPARENCY_DISABLED
 	material.render_priority = Material.RENDER_PRIORITY_MAX
 	material.no_depth_test = true
 
-static func get_edge(aabb : AABB, p_edge : int) -> Array:
+static func get_edge(aabb: AABB, p_edge: int) -> Array:
 	var result : Array[Vector3] = []
 	result.resize(2)
 	var position = aabb.position
@@ -50,7 +53,7 @@ static func get_edge(aabb : AABB, p_edge : int) -> Array:
 			result[1] = (Vector3(position.x + size.x, position.y + size.y, position.z + size.z))
 	return result;
 
-static func scaled_orthogonal(basis : Basis, scale : Vector3) -> Basis:
+static func scaled_orthogonal(basis: Basis, scale: Vector3) -> Basis:
 	var s = Vector3(-1, -1, -1) + scale
 	var sign = (s.x + s.y + s.z) < 0
 	var b = basis.orthonormalized()

@@ -5,9 +5,9 @@ namespace Gizmo3DPlugin;
 public static class Helper
 {
 
-	public static void SetOnTopOfAlpha(this BaseMaterial3D material)
+	public static void SetOnTopOfAlpha(this BaseMaterial3D material, bool alpha = false)
 	{
-		material.Transparency = BaseMaterial3D.TransparencyEnum.Disabled;
+		material.Transparency = alpha ? BaseMaterial3D.TransparencyEnum.Alpha : BaseMaterial3D.TransparencyEnum.Disabled;
 		material.RenderPriority = (int) Material.RenderPriorityMax;
 		material.NoDepthTest = true;
 	}

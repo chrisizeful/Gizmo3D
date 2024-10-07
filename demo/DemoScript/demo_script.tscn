@@ -32,8 +32,9 @@ script = ExtResource("2_cntj6")
 gizmo = NodePath("../Gizmo3D")
 message = NodePath("../UI/Message")
 
-[node name="Gizmo3D" type="Node3D" parent="."]
+[node name="Gizmo3D" type="Node3D" parent="." node_paths=PackedStringArray("target")]
 script = ExtResource("3_6yall")
+target = NodePath("../Objects/coin")
 
 [node name="Objects" type="Node3D" parent="."]
 
