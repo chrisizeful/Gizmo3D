@@ -1470,7 +1470,7 @@ void fragment() {
 
     Aabb CalculateSpatialBounds(Node3D parent, bool omitTopLevel = false, Transform3D boundsOrientation = default)
     {
-	    Aabb bounds;
+        Aabb bounds;
 
         Transform3D tBoundsOrientation;
         if (boundsOrientation != default)
