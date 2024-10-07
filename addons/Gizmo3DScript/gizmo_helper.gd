@@ -1,5 +1,5 @@
-class_name GizmoHelper;
-extends Node;
+class_name GizmoHelper
+extends Node
 
 static func set_on_top_of_alpha(material: BaseMaterial3D, alpha: bool = false):
 	if alpha:
@@ -51,7 +51,7 @@ static func get_edge(aabb: AABB, p_edge: int) -> Array:
 		11:
 			result[0] = (Vector3(position.x + size.x, position.y, position.z + size.z))
 			result[1] = (Vector3(position.x + size.x, position.y + size.y, position.z + size.z))
-	return result;
+	return result
 
 static func scaled_orthogonal(basis: Basis, scale: Vector3) -> Basis:
 	var s = Vector3(-1, -1, -1) + scale

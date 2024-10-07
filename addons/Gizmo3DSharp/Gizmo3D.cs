@@ -3,9 +3,11 @@ using static Godot.RenderingServer;
 
 namespace Gizmo3DPlugin;
 
-// Translated from C++ to C# with alterations, source from:
-// - https://github.com/godotengine/godot/blob/master/editor/plugins/node_3d_editor_plugin.h
-// - https://github.com/godotengine/godot/blob/master/editor/plugins/node_3d_editor_plugin.cpp
+/*
+Translated from C++ to C# with alterations, from:
+    - https://github.com/godotengine/godot/blob/master/editor/plugins/node_3d_editor_plugin.h
+    - https://github.com/godotengine/godot/blob/master/editor/plugins/node_3d_editor_plugin.cpp
+*/
 public partial class Gizmo3D : Node3D
 {
 
@@ -20,10 +22,12 @@ public partial class Gizmo3D : Node3D
     const float GIZMO_SCALE_OFFSET = GIZMO_CIRCLE_SIZE - 0.3f;
     const float GIZMO_ARROW_OFFSET = GIZMO_CIRCLE_SIZE + 0.15f;
 
+    // Used to limit the which transformations are being edited.
     [Export]
     public ToolMode Mode { get; set; } = ToolMode.All;
 
     uint layers = 1;
+    // The 3D render layers this gizmo is visible on.
     [Export(PropertyHint.Layers3DRender)]
     public uint Layers
     {
@@ -46,11 +50,15 @@ public partial class Gizmo3D : Node3D
         }
     }
 
+    // The node this gizmo will apply transformations to.
     [Export]
     public Node3D Target { get; set; }
+    // Whether or not transformations will be snapped to RotateSnap, ScaleSnap, and/or TranslateSnap.
     public bool Snapping { get; private set; }
+    // A displayable message describing the current transformation being applied, for example "Rotating: {60.000} degrees".
     public string Message { get; private set; }
 
+    // If the user is currently interacting with is gizmo.
     bool editing;
     public bool Editing
     {
@@ -63,14 +71,21 @@ public partial class Gizmo3D : Node3D
         }
     }
 
+    // If the user is currently hovering over a gizmo.
+    public bool Hovering { get; private set; }
+
     [ExportGroup("Style")]
+    // The size of the gizmo before distance based scaling is applied.
     [Export(PropertyHint.Range, "30,200")]
     public float Size { get; set; } = 80.0f;
+    // If the X/Y/Z axes extending to infinity are drawn.
     [Export]
     public bool ShowAxes { get; set; } = true;
+    // If the box encapsulating the target node is drawn.
     [Export]
     public bool ShowSelectionBox { get; set; } = true;
 
+    // Alpha value for all gizmos and the selection box.
     float opacity = .9f;
     [Export(PropertyHint.Range, "0,1")]
     public float Opacity
@@ -84,6 +99,7 @@ public partial class Gizmo3D : Node3D
         }
     }
 
+    // The colors of the gizmos. 0 is the X axis, 1 is the Y axis, and 2 is the Z axis.
     Color[] colors = new Color[]
     {
         new(0.96f, 0.20f, 0.32f),
@@ -102,6 +118,7 @@ public partial class Gizmo3D : Node3D
         }
     }
 
+    // The color of the AABB surrounding the target node.
     Color selectionBoxColor = new(1.0f, 0.5f, 0);
     [Export(PropertyHint.ColorNoAlpha)]
     public Color SelectionBoxColor
@@ -119,12 +136,16 @@ public partial class Gizmo3D : Node3D
     }
 
     [ExportGroup("Position")]
+    // Whether the transformations are applied to the target in local or global space.
     [Export]
     public bool LocalCoords { get; set; }
+    // Value to snap rotations to, if enabled.
     [Export(PropertyHint.Range, "0,360")]
     public float RotateSnap { get; set; } = 15.0f;
+    // Value to snap translations to, if enabled.
     [Export(PropertyHint.Range, "0,10")]
     public float TranslateSnap { get; set; } = 1.0f;
+    // Value to snap scaling to, if enabled.
     [Export(PropertyHint.Range, "0,5")]
     public float ScaleSnap { get; set; } = .25f;
 
@@ -181,12 +202,12 @@ public partial class Gizmo3D : Node3D
 
     public override void _UnhandledInput(InputEvent @event)
     {
+        Hovering = false;
         if (!Visible)
         {
             Editing = false;
-            return;
         }
-        if (@event is InputEventKey key && key.Keycode == Key.Ctrl)
+        else if (@event is InputEventKey key && key.Keycode == Key.Ctrl)
         {
             Snapping = key.Pressed;
         }
@@ -206,7 +227,7 @@ public partial class Gizmo3D : Node3D
                 UpdateTransform(false);
                 return;
             }
-            TransformGizmoSelect(motion.Position, true);
+            Hovering = TransformGizmoSelect(motion.Position, true);
         }
     }
 
@@ -659,6 +680,7 @@ void fragment() {
             RotateGizmoColorHl[i].SetShaderParameter("albedo", albedo);
         }
         RotateGizmoColor[3].SetShaderParameter("albedo", new Color(0.75f, 0.75f, 0.75f, Opacity / 3.0f));
+        SelectGizmoHighlightAxis(-1);
     }
 
     void UpdateTransformGizmoView()
@@ -1136,21 +1158,21 @@ void fragment() {
                     return originalLocal.TranslatedLocal(motion);
                 return original.Translated(motion);
             case TransformMode.Rotate:
-                Transform3D r;
                 if (local)
                 {
                     Vector3 axis = originalLocal.Basis * motion;
-                    r.Basis = new Basis(axis.Normalized(), extra) * originalLocal.Basis;
-                    r.Origin = originalLocal.Origin;
+                    return new Transform3D(
+                        new Basis(axis.Normalized(), extra) * originalLocal.Basis,
+                        originalLocal.Origin);
                 }
                 else
                 {
                     Basis blocal = original.Basis * originalLocal.Basis.Inverse();
                     Vector3 axis = motion * blocal;
-                    r.Basis = blocal * new Basis(axis.Normalized(), extra) * originalLocal.Basis;
-                    r.Origin = new Basis(motion, extra) * (original.Origin - Edit.Center) + Edit.Center;
+                    return new Transform3D(
+                        blocal * new Basis(axis.Normalized(), extra) * originalLocal.Basis,
+                        new Basis(motion, extra) * (original.Origin - Edit.Center) + Edit.Center);
                 }
-                return r;
             default:
                 GD.PushError("Gizmo3D#ComputeTransform: Invalid mode");
                 return default;
@@ -1220,7 +1242,9 @@ void fragment() {
                         smotion = smotionMask.Dot(smotion) * smotionMask;
                     else if (shift) // Alternative planar scaling mode
                         smotion = smotionMask.Dot(smotion) * smotionMask;
-                } else {
+                }
+                else
+                {
                     float centerClickDist = sclick.Value.DistanceTo(Edit.Center);
                     float centerIntersDist = sintersection.Value.DistanceTo(Edit.Center);
                     if (centerClickDist == 0)

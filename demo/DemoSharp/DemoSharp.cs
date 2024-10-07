@@ -10,6 +10,9 @@ public partial class DemoSharp : Node3D
 
     public override void _UnhandledInput(InputEvent @event)
     {
+		// Prevent object picking is user is interacting with the gizmo
+		if (Gizmo.Hovering || Gizmo.Editing)
+			return;
         if (@event is InputEventMouseButton button && button.ButtonIndex == MouseButton.Left && button.Pressed)
 		{
 			Camera3D camera = GetViewport().GetCamera3D();

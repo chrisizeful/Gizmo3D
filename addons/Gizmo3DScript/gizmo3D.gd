@@ -1,8 +1,11 @@
-# Translated from C++ to GDScript with alterations, source from:
-# - https://github.com/godotengine/godot/blob/master/editor/plugins/node_3d_editor_plugin.h
-# - https://github.com/godotengine/godot/blob/master/editor/plugins/node_3d_editor_plugin.cpp
-class_name Gizmo3D;
+class_name Gizmo3D
 extends Node3D
+## Gizmo3D aims to encapsulate the Godot Engines 3D move/scale/rotation gizmos into a customizable node for use at runtime.
+## 
+## There are some differences - namely, the ability to edit all transformations at the same time and only one node can be edited at a time.
+## Translated from C++ to GDScript with alterations, from this
+## [url=https://github.com/godotengine/godot/blob/master/editor/plugins/node_3d_editor_plugin.h]source[/url] and
+## [url=https://github.com/godotengine/godot/blob/master/editor/plugins/node_3d_editor_plugin.cpp]header[/url] file.
 
 const DEFAULT_FLOAT_STEP := 0.001
 const MAX_Z := 1000000.0
@@ -15,11 +18,13 @@ const GIZMO_CIRCLE_SIZE := 1.1
 const GIZMO_SCALE_OFFSET := GIZMO_CIRCLE_SIZE - .3
 const GIZMO_ARROW_OFFSET := GIZMO_CIRCLE_SIZE + .15
 
+## Used to limit the which transformations are being edited.
 @export
 var mode := ToolMode.ALL
 
 @export_flags_3d_render
 var _layers := 1
+## The 3D render layers this gizmo is visible on.
 var layers: int:
 	get:
 		return _layers
@@ -36,30 +41,51 @@ var layers: int:
 			RenderingServer.instance_set_layer_mask(_axis_gizmo_instance[i], _layers)
 			RenderingServer.instance_set_layer_mask(_rotate_gizmo_instance[i], _layers)
 
+## The node this gizmo will apply transformations to.
 @export
 var target : Node3D
-var snapping : bool
-var message : String
+var _snapping : bool
+## Whether or not transformations will be snapped to [member rotate_snap], [member scale_snap], and/or [member translate_snap].
+var snapping: bool:
+	get:
+		return _snapping
+var _message : String
+## A displayable message describing the current transformation being applied, for example "Rotating: {60.000} degrees".
+var message: String:
+	get:
+		return _message
 
 var _editing: bool:
 	set(value):
 		_editing = value
 		if !value:
-			message = ""
+			_message = ""
+## If the user is currently interacting with is gizmo.
 var editing: bool:
 	get:
 		return _editing
 
+var _hovering: bool
+## If the user is currently hovering over a gizmo.
+var hovering: bool:
+	get:
+		return _hovering
+
 @export_group("Style")
-@export
+## The size of the gizmo before distance based scaling is applied.
+@export_range(30, 200)
 var size := 80.0
+## If the X/Y/Z axes extending to infinity are drawn.
 @export
 var show_axes := true
+## If the box encapsulating the target node is drawn.
 @export
 var show_selection_box := true
 
-@export
+## Alpha value for all gizmos and the selection box.
+@export_range(0.0, 1.0)
 var _opacity := .9
+## Alpha value for all gizmos and the selection box.
 var opacity: float:
 	get:
 		return _opacity
@@ -68,12 +94,14 @@ var opacity: float:
 			_set_colors()
 		_opacity = value
 
+## The colors of the gizmos. 0 is the X axis, 1 is the Y axis, and 2 is the Z axis.
 @export
 var _colors : Array[Color] = [
 	Color(0.96, 0.20, 0.32),
 	Color(0.53, 0.84, 0.01),
 	Color(0.16, 0.55, 0.96)
 ]
+## The colors of the gizmos. 0 is the X axis, 1 is the Y axis, and 2 is the Z axis.
 var colors: Array[Color]:
 	get:
 		return _colors
@@ -82,8 +110,10 @@ var colors: Array[Color]:
 			_set_colors()
 		_colors = value
 
+## The color of the AABB surrounding the target node.
 @export
 var _selection_box_color := Color(1.0, .5, 0)
+## The color of the AABB surrounding the target node.
 var selection_box_color: Color:
 	get:
 		return _selection_box_color
@@ -94,12 +124,16 @@ var selection_box_color: Color:
 		_selection_box_color = value
 
 @export_group("Position")
+## Whether the transformations are applied to the target in local or global space.
 @export
 var local_coords : bool
+## Value to snap rotations to, if enabled.
 @export_range(0.0, 360.0)
 var rotate_snap := 15.0
+## Value to snap translations to, if enabled.
 @export_range(0.0, 10.0)
 var translate_snap := 1.0
+## Value to snap scaling to, if enabled.
 @export_range(0.0, 5.0)
 var scale_snap = .25
 
@@ -171,11 +205,11 @@ func _ready() -> void:
 	selection_box_color = _selection_box_color
 
 func _unhandled_input(event: InputEvent) -> void:
+	_hovering = false
 	if !visible:
 		_editing = false
-		return
-	if event is InputEventKey and event.keycode == KEY_CTRL:
-		snapping = event.pressed
+	elif event is InputEventKey and event.keycode == KEY_CTRL:
+		_snapping = event.pressed
 	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		_editing = event.pressed
 		if !editing:
@@ -187,7 +221,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			_edit.mouse_pos = event.position
 			_update_transform(false)
 			return
-		_transform_gizmo_select(event.position, true)
+		_hovering = _transform_gizmo_select(event.position, true)
 
 func _process(delta: float) -> void:
 	if target == null || !is_instance_valid(target) || target.is_queued_for_deletion():
@@ -293,8 +327,8 @@ func _init_indicators() -> void:
 		_gizmo_color_hl[i] = mat.duplicate()
 		
 		# Translate
-		var surfTool = SurfaceTool.new()
-		surfTool.begin(Mesh.PRIMITIVE_TRIANGLES)
+		var surf_tool = SurfaceTool.new()
+		surf_tool.begin(Mesh.PRIMITIVE_TRIANGLES)
 		
 		# Arrow profile
 		var arrow_points := 5
@@ -304,7 +338,7 @@ func _init_indicators() -> void:
 			nivec * 0.01 + ivec * GIZMO_ARROW_OFFSET,
 			nivec * 0.12 + ivec * GIZMO_ARROW_OFFSET,
 			nivec * 0.0 + ivec * (GIZMO_ARROW_OFFSET + GIZMO_ARROW_SIZE)
-		];
+		]
 		
 		var arrow_sides := 16
 		var arrow_sides_step := TAU / arrow_sides
@@ -318,19 +352,19 @@ func _init_indicators() -> void:
 					mbb * arrow[j + 1],
 					maa * arrow[j + 1]
 				]
-				surfTool.add_vertex(apoints[0])
-				surfTool.add_vertex(apoints[1])
-				surfTool.add_vertex(apoints[2])
+				surf_tool.add_vertex(apoints[0])
+				surf_tool.add_vertex(apoints[1])
+				surf_tool.add_vertex(apoints[2])
 				
-				surfTool.add_vertex(apoints[0])
-				surfTool.add_vertex(apoints[1])
-				surfTool.add_vertex(apoints[2])
-		surfTool.set_material(mat)
-		surfTool.commit(_move_gizmo[i])
+				surf_tool.add_vertex(apoints[0])
+				surf_tool.add_vertex(apoints[1])
+				surf_tool.add_vertex(apoints[2])
+		surf_tool.set_material(mat)
+		surf_tool.commit(_move_gizmo[i])
 		
 		# Plane translation
-		surfTool = SurfaceTool.new()
-		surfTool.begin(Mesh.PRIMITIVE_TRIANGLES)
+		surf_tool = SurfaceTool.new()
+		surf_tool.begin(Mesh.PRIMITIVE_TRIANGLES)
 		
 		var vec := ivec2 - ivec3
 		var plane := [
@@ -347,13 +381,13 @@ func _init_indicators() -> void:
 			ma * plane[2],
 			ma * plane[3]
 		]
-		surfTool.add_vertex(points[0])
-		surfTool.add_vertex(points[1])
-		surfTool.add_vertex(points[2])
+		surf_tool.add_vertex(points[0])
+		surf_tool.add_vertex(points[1])
+		surf_tool.add_vertex(points[2])
 
-		surfTool.add_vertex(points[0])
-		surfTool.add_vertex(points[2])
-		surfTool.add_vertex(points[3])
+		surf_tool.add_vertex(points[0])
+		surf_tool.add_vertex(points[2])
+		surf_tool.add_vertex(points[3])
 		
 		var plane_mat := StandardMaterial3D.new()
 		plane_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
@@ -362,13 +396,13 @@ func _init_indicators() -> void:
 		plane_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
 		GizmoHelper.set_on_top_of_alpha(plane_mat,true)
 		_plane_gizmo_color[i] = plane_mat
-		surfTool.set_material(plane_mat)
-		surfTool.commit(_move_plane_gizmo[i])
+		surf_tool.set_material(plane_mat)
+		surf_tool.commit(_move_plane_gizmo[i])
 		_plane_gizmo_color_hl[i] = plane_mat.duplicate()
 		
 		# Rotation
-		surfTool = SurfaceTool.new()
-		surfTool.begin(Mesh.PRIMITIVE_TRIANGLES)
+		surf_tool = SurfaceTool.new()
+		surf_tool.begin(Mesh.PRIMITIVE_TRIANGLES)
 		
 		var CIRCLE_SEGMENTS := 128
 		var CIRCLE_SEGMENT_THICKNESS := 3
@@ -380,8 +414,8 @@ func _init_indicators() -> void:
 			for k in range(CIRCLE_SEGMENT_THICKNESS):
 				var ofs := Vector2(cos((TAU * k) / CIRCLE_SEGMENT_THICKNESS), sin((TAU * k) / CIRCLE_SEGMENT_THICKNESS))
 				var normal := ivec * ofs.x + ivec2 * ofs.y
-				surfTool.set_normal(basis * normal)
-				surfTool.add_vertex(vertex)
+				surf_tool.set_normal(basis * normal)
+				surf_tool.add_vertex(vertex)
 		
 		for j in range(CIRCLE_SEGMENTS):
 			for k in range(CIRCLE_SEGMENT_THICKNESS):
@@ -390,13 +424,13 @@ func _init_indicators() -> void:
 				var current_segment := k
 				var next_segment := (k + 1) % CIRCLE_SEGMENT_THICKNESS
 				
-				surfTool.add_index(current_ring + next_segment)
-				surfTool.add_index(current_ring + current_segment)
-				surfTool.add_index(next_ring + current_segment)
+				surf_tool.add_index(current_ring + next_segment)
+				surf_tool.add_index(current_ring + current_segment)
+				surf_tool.add_index(next_ring + current_segment)
 
-				surfTool.add_index(next_ring + current_segment)
-				surfTool.add_index(next_ring + next_segment)
-				surfTool.add_index(current_ring + next_segment)
+				surf_tool.add_index(next_ring + current_segment)
+				surf_tool.add_index(next_ring + next_segment)
+				surf_tool.add_index(current_ring + next_segment)
 		
 		var rotate_shader := Shader.new()
 		rotate_shader.code = r"
@@ -435,7 +469,7 @@ void fragment() {
 		rotate_mat.shader = rotate_shader
 		_rotate_gizmo_color[i] = rotate_mat
 		
-		var arrays := surfTool.commit_to_arrays()
+		var arrays := surf_tool.commit_to_arrays()
 		_rotate_gizmo[i].add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
 		_rotate_gizmo[i].surface_set_material(0, rotate_mat)
 		
@@ -484,8 +518,8 @@ void fragment() {
 			_rotate_gizmo[3].surface_set_material(0, border_mat)
 		
 		# Scale
-		surfTool = SurfaceTool.new()
-		surfTool.begin(Mesh.PRIMITIVE_TRIANGLES)
+		surf_tool = SurfaceTool.new()
+		surf_tool.begin(Mesh.PRIMITIVE_TRIANGLES)
 		
 		# Cube arrow profile
 		arrow_points = 6
@@ -510,19 +544,19 @@ void fragment() {
 					mbb * arrow[j + 1],
 					maa * arrow[j + 1]
 				]
-				surfTool.add_vertex(apoints[0])
-				surfTool.add_vertex(apoints[1])
-				surfTool.add_vertex(apoints[2])
+				surf_tool.add_vertex(apoints[0])
+				surf_tool.add_vertex(apoints[1])
+				surf_tool.add_vertex(apoints[2])
 
-				surfTool.add_vertex(apoints[0])
-				surfTool.add_vertex(apoints[2])
-				surfTool.add_vertex(apoints[3])
-		surfTool.set_material(mat)
-		surfTool.commit(_scale_gizmo[i])
+				surf_tool.add_vertex(apoints[0])
+				surf_tool.add_vertex(apoints[2])
+				surf_tool.add_vertex(apoints[3])
+		surf_tool.set_material(mat)
+		surf_tool.commit(_scale_gizmo[i])
 		
 		# Plane scale
-		surfTool = SurfaceTool.new()
-		surfTool.begin(Mesh.PRIMITIVE_TRIANGLES)
+		surf_tool = SurfaceTool.new()
+		surf_tool.begin(Mesh.PRIMITIVE_TRIANGLES)
 		
 		vec = ivec2 - ivec3
 		plane = [
@@ -540,13 +574,13 @@ void fragment() {
 			ma * plane[2],
 			ma * plane[3]
 		]
-		surfTool.add_vertex(points[0])
-		surfTool.add_vertex(points[1])
-		surfTool.add_vertex(points[2])
+		surf_tool.add_vertex(points[0])
+		surf_tool.add_vertex(points[1])
+		surf_tool.add_vertex(points[2])
 
-		surfTool.add_vertex(points[0])
-		surfTool.add_vertex(points[2])
-		surfTool.add_vertex(points[3])
+		surf_tool.add_vertex(points[0])
+		surf_tool.add_vertex(points[2])
+		surf_tool.add_vertex(points[3])
 		
 		plane_mat = StandardMaterial3D.new()
 		plane_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
@@ -555,23 +589,23 @@ void fragment() {
 		plane_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
 		GizmoHelper.set_on_top_of_alpha(plane_mat, true)
 		_plane_gizmo_color[i] = plane_mat
-		surfTool.set_material(plane_mat)
-		surfTool.commit(_scale_plane_gizmo[i])
+		surf_tool.set_material(plane_mat)
+		surf_tool.commit(_scale_plane_gizmo[i])
 		
 		_plane_gizmo_color_hl[i] = plane_mat.duplicate()
 		
 		# Lines to visualize transforms locked to an axis/plane
-		surfTool = SurfaceTool.new()
-		surfTool.begin(Mesh.PRIMITIVE_LINE_STRIP)
+		surf_tool = SurfaceTool.new()
+		surf_tool.begin(Mesh.PRIMITIVE_LINE_STRIP)
 		
 		vec = Vector3()
 		vec[i] = 1
 		# line extending through infinity(ish)
-		surfTool.add_vertex(vec * -1048576);
-		surfTool.add_vertex(Vector3());
-		surfTool.add_vertex(vec * 1048576);
-		surfTool.set_material(_gizmo_color_hl[i]);
-		surfTool.commit(_axis_gizmo[i]);
+		surf_tool.add_vertex(vec * -1048576)
+		surf_tool.add_vertex(Vector3())
+		surf_tool.add_vertex(vec * 1048576)
+		surf_tool.set_material(_gizmo_color_hl[i])
+		surf_tool.commit(_axis_gizmo[i])
 	_generate_selection_boxes()
 
 func _set_colors() -> void:
@@ -586,6 +620,7 @@ func _set_colors() -> void:
 		_plane_gizmo_color_hl[i].albedo_color = albedo
 		_rotate_gizmo_color_hl[i].set_shader_parameter("albedo", albedo)
 	_rotate_gizmo_color[3].set_shader_parameter("albedo", Color(.75, .75, .75, opacity / 3.0))
+	_select_gizmo_highlight_axis(-1)
 
 func _update_transform_gizmo_view() -> void:
 	if !visible:
@@ -600,13 +635,13 @@ func _update_transform_gizmo_view() -> void:
 		_set_visibility(false)
 		return
 	
-	var camz := -camera_transform.basis.z.normalized()
-	var camy := -camera_transform.basis.y.normalized()
+	var camz := -camera_transform.basis[2].normalized()
+	var camy := -camera_transform.basis[1].normalized()
 	var p := Plane(camz, camera_transform.origin)
-	var gizmoD := max(abs(p.distance_to(xform.origin)), 0.00001)
+	var gizmoD := max(abs(p.distance_to(xform.origin)), 1e-06)
 	var d0 = camera.unproject_position(camera_transform.origin + camz * gizmoD).y
 	var d1 = camera.unproject_position(camera_transform.origin + camz * gizmoD + camy).y
-	var dd = max(abs(d0 - d1), 0.00001)
+	var dd = max(abs(d0 - d1), 1e-06)
 	
 	_gizmo_scale = size / abs(dd)
 	var scale := Vector3.ONE * _gizmo_scale
@@ -618,22 +653,22 @@ func _update_transform_gizmo_view() -> void:
 		return
 	
 	for i in range(3):
-		var axis_angle := Transform3D()
+		var axis_angle := Transform3D.IDENTITY
 		if xform.basis[i].normalized().dot(xform.basis[(i + 1) % 3].normalized()) < 1.0:
 			axis_angle = axis_angle.looking_at(xform.basis[i].normalized(), xform.basis[(i + 1) % 3].normalized())
 		axis_angle.basis *= basis.scaled(scale)
 		axis_angle.origin = xform.origin
 		RenderingServer.instance_set_transform(_move_gizmo_instance[i], axis_angle)
-		RenderingServer.instance_set_visible(_move_gizmo_instance[i], mode == ToolMode.ALL || mode == ToolMode.MOVE);
-		RenderingServer.instance_set_transform(_move_plane_gizmo_instance[i], axis_angle);
-		RenderingServer.instance_set_visible(_move_plane_gizmo_instance[i], mode == ToolMode.ALL || mode == ToolMode.MOVE);
-		RenderingServer.instance_set_transform(_rotate_gizmo_instance[i], axis_angle);
-		RenderingServer.instance_set_visible(_rotate_gizmo_instance[i], mode == ToolMode.ALL || mode == ToolMode.ROTATE);
-		RenderingServer.instance_set_transform(_scale_gizmo_instance[i], axis_angle);
-		RenderingServer.instance_set_visible(_scale_gizmo_instance[i], mode == ToolMode.ALL || mode == ToolMode.SCALE);
-		RenderingServer.instance_set_transform(_scale_plane_gizmo_instance[i], axis_angle);
-		RenderingServer.instance_set_visible(_scale_plane_gizmo_instance[i], mode == ToolMode.SCALE);
-		RenderingServer.instance_set_transform(_axis_gizmo_instance[i], xform);
+		RenderingServer.instance_set_visible(_move_gizmo_instance[i], mode == ToolMode.ALL || mode == ToolMode.MOVE)
+		RenderingServer.instance_set_transform(_move_plane_gizmo_instance[i], axis_angle)
+		RenderingServer.instance_set_visible(_move_plane_gizmo_instance[i], mode == ToolMode.ALL || mode == ToolMode.MOVE)
+		RenderingServer.instance_set_transform(_rotate_gizmo_instance[i], axis_angle)
+		RenderingServer.instance_set_visible(_rotate_gizmo_instance[i], mode == ToolMode.ALL || mode == ToolMode.ROTATE)
+		RenderingServer.instance_set_transform(_scale_gizmo_instance[i], axis_angle)
+		RenderingServer.instance_set_visible(_scale_gizmo_instance[i], mode == ToolMode.ALL || mode == ToolMode.SCALE)
+		RenderingServer.instance_set_transform(_scale_plane_gizmo_instance[i], axis_angle)
+		RenderingServer.instance_set_visible(_scale_plane_gizmo_instance[i], mode == ToolMode.SCALE)
+		RenderingServer.instance_set_transform(_axis_gizmo_instance[i], xform)
 	
 	var show := show_axes and editing
 	RenderingServer.instance_set_visible(_axis_gizmo_instance[0], show and (_edit.plane == TransformPlane.X || _edit.plane == TransformPlane.XY || _edit.plane == TransformPlane.XZ))
@@ -659,10 +694,10 @@ func _update_transform_gizmo_view() -> void:
 		t = t.translated_local(bounds.position - offset / 2)
 		t.basis *= aabb_s
 		
-		offset = Vector3(0.01, 0.01, 0.01);
-		aabb_s = Basis.from_scale(bounds.size + offset);
-		t_offset = t_offset.translated_local(bounds.position - offset / 2);
-		t_offset.basis *= aabb_s;
+		offset = Vector3(0.01, 0.01, 0.01)
+		aabb_s = Basis.from_scale(bounds.size + offset)
+		t_offset = t_offset.translated_local(bounds.position - offset / 2)
+		t_offset.basis *= aabb_s
 	
 	var show_selection := show_selection_box and target != null
 	RenderingServer.instance_set_transform(_sbox_instance, t)
@@ -840,7 +875,7 @@ func _transform_gizmo_select(screen_pos: Vector2, highlight_only: bool = false):
 				_edit.plane = TransformPlane.X + col_axis
 				if is_plane_translate:
 					_edit.plane += 3
-				return true
+			return true
 		
 	if mode == ToolMode.ALL || mode == ToolMode.ROTATE:
 		var col_axis := -1
@@ -980,17 +1015,17 @@ func _compute_transform(mode: TransformMode, original: Transform3D, original_loc
 				return original_local.translated_local(motion)
 			return original.translated(motion)
 		TransformMode.ROTATE:
-			var r : Transform3D
 			if local:
 				var axis := original_local.basis * motion
-				r.basis = Basis(axis.normalized(), extra) * original_local.basis
-				r.origin = original_local.origin
+				return Transform3D(
+					Basis(axis.normalized(), extra) * original_local.basis,
+					original_local.origin)
 			else:
 				var blocal := original.basis * original_local.basis.inverse()
 				var axis := motion * blocal
-				r.basis = blocal * Basis(axis.normalized(), extra) * original_local.basis
-				r.origin = Basis(motion, extra) * (original.origin - _edit.center) + _edit.center
-			return r
+				return Transform3D(
+					blocal * Basis(axis.normalized(), extra) * original_local.basis,
+					Basis(motion, extra) * (original.origin - _edit.center) + _edit.center)
 	push_error("Gizmo3D#ComputeTransform: Invalid mode")
 	return Transform3D()
 
@@ -1065,12 +1100,11 @@ func _update_transform(shift: bool) -> void:
 			var x := "%.3f" % smotion_snapped.x
 			var y := "%.3f" % smotion_snapped.y
 			var z := "%.3f" % smotion_snapped.z
-			message = TranslationServer.translate("Scaling") + ": (" + x + ", " + y + ", " + z + ")"
+			_message = TranslationServer.translate("Scaling") + ": (" + x + ", " + y + ", " + z + ")"
 			if slocal_coords:
 				smotion = _edit.target_original.basis.inverse() * smotion
 			
 			_apply_transform(smotion, snap)
-			
 		TransformMode.TRANSLATE:
 			var tmotion_mask := Vector3.ZERO
 			var tplane := Plane.PLANE_XY
@@ -1080,14 +1114,14 @@ func _update_transform(shift: bool) -> void:
 				TransformPlane.VIEW:
 					tplane = Plane(_get_camera_normal(), _edit.center)
 				TransformPlane.X:
-					tmotion_mask = transform.basis[0].normalized();
-					tplane = Plane(tmotion_mask.cross(tmotion_mask.cross(_get_camera_normal())).normalized(), _edit.center);
+					tmotion_mask = transform.basis[0].normalized()
+					tplane = Plane(tmotion_mask.cross(tmotion_mask.cross(_get_camera_normal())).normalized(), _edit.center)
 				TransformPlane.Y:
-					tmotion_mask = transform.basis[1].normalized();
-					tplane = Plane(tmotion_mask.cross(tmotion_mask.cross(_get_camera_normal())).normalized(), _edit.center);
+					tmotion_mask = transform.basis[1].normalized()
+					tplane = Plane(tmotion_mask.cross(tmotion_mask.cross(_get_camera_normal())).normalized(), _edit.center)
 				TransformPlane.Z:
-					tmotion_mask = transform.basis[2].normalized();
-					tplane = Plane(tmotion_mask.cross(tmotion_mask.cross(_get_camera_normal())).normalized(), _edit.center);
+					tmotion_mask = transform.basis[2].normalized()
+					tplane = Plane(tmotion_mask.cross(tmotion_mask.cross(_get_camera_normal())).normalized(), _edit.center)
 				TransformPlane.YZ:
 					tplane = Plane(transform.basis[0].normalized(), _edit.center)
 					tplane_mv = true
@@ -1120,7 +1154,7 @@ func _update_transform(shift: bool) -> void:
 			var x := "%.3f" % tmotion_snapped.x
 			var y := "%.3f" % tmotion_snapped.y
 			var z := "%.3f" % tmotion_snapped.z
-			message = TranslationServer.translate("Translating") + ": (" + x + ", " + y + ", " + z + ")"
+			_message = TranslationServer.translate("Translating") + ": (" + x + ", " + y + ", " + z + ")"
 			if tlocal_coords:
 				tmotion = transform.basis.inverse() * tmotion
 			
@@ -1178,9 +1212,9 @@ func _update_transform(shift: bool) -> void:
 			if snapping:
 				snap = rotate_snap
 			
-			angle = snapped(rad_to_deg(angle), snap)
+			angle = snappedf(rad_to_deg(angle), snap)
 			var d := "%.3f" % angle
-			message = TranslationServer.translate("Rotating") + ": {" + d + "} " + TranslationServer.translate("degrees")
+			_message = TranslationServer.translate("Rotating") + ": {" + d + "} " + TranslationServer.translate("degrees")
 			angle = deg_to_rad(angle)
 			
 			var rlocal_coords = local_coords and _edit.plane != TransformPlane.VIEW # Disable local transformation for TRANSFORM_VIEW
@@ -1189,7 +1223,7 @@ func _update_transform(shift: bool) -> void:
 				compute_axis = local_axis
 			_apply_transform(compute_axis, angle)
 
-func _apply_transform(motion: Vector3, snap: bool) -> void:
+func _apply_transform(motion: Vector3, snap: float) -> void:
 	var is_local_coords := local_coords and _edit.plane != TransformPlane.VIEW
 	var new_transform := _compute_transform(_edit.mode, _edit.target_global, _edit.target_original, motion, snap, is_local_coords, _edit.plane != TransformPlane.VIEW)
 	_transform_gizmo_apply(target, new_transform, is_local_coords)
