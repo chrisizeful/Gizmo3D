@@ -1,4 +1,4 @@
-[gd_scene load_steps=12 format=3 uid="uid://dw2fun6cmcxie"]
+[gd_scene load_steps=13 format=3 uid="uid://dw2fun6cmcxie"]
 
 [ext_resource type="Script" path="res://demo/DemoSharp/DemoSharp.cs" id="1_r6fd2"]
 [ext_resource type="Script" path="res://demo/DemoSharp/CameraSharp.cs" id="2_125yw"]
@@ -12,7 +12,11 @@
 
 [sub_resource type="Environment" id="Environment_nlrnx"]
 
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ggl13"]
+albedo_color = Color(0.342716, 0.199815, 0.136545, 1)
+
 [sub_resource type="PlaneMesh" id="PlaneMesh_5ilx2"]
+material = SubResource("StandardMaterial3D_ggl13")
 size = Vector2(50, 50)
 
 [node name="DemoSharp" type="Node3D" node_paths=PackedStringArray("Gizmo")]

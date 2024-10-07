@@ -1,4 +1,4 @@
-[gd_scene load_steps=12 format=3 uid="uid://bgx4kvwwytgf5"]
+[gd_scene load_steps=13 format=3 uid="uid://bgx4kvwwytgf5"]
 
 [ext_resource type="Script" path="res://demo/DemoScript/demo_script.gd" id="1_2crre"]
 [ext_resource type="Script" path="res://demo/DemoScript/camera_script.gd" id="2_cntj6"]
@@ -12,7 +12,11 @@
 
 [sub_resource type="Environment" id="Environment_nlrnx"]
 
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ggl13"]
+albedo_color = Color(0.342716, 0.199815, 0.136545, 1)
+
 [sub_resource type="PlaneMesh" id="PlaneMesh_5ilx2"]
+material = SubResource("StandardMaterial3D_ggl13")
 size = Vector2(50, 50)
 
 [node name="DemoScript" type="Node3D" node_paths=PackedStringArray("gizmo")]
@@ -35,6 +39,8 @@ message = NodePath("../UI/Message")
 [node name="Gizmo3D" type="Node3D" parent="." node_paths=PackedStringArray("target")]
 script = ExtResource("3_6yall")
 target = NodePath("../Objects/coin")
+_colors = Array[Color]([Color(0.110124, 0.605119, 0.705983, 1), Color(0.073115, 0.456205, 0.535289, 1), Color(0.0479613, 0.352446, 0.415412, 1)])
+_selection_box_color = Color(0.702439, 0.601297, 0.864144, 1)
 
 [node name="Objects" type="Node3D" parent="."]
 
@@ -91,6 +97,10 @@ text = "Move: WASD"
 [node name="Look" type="Label" parent="UI/Controls/PanelContainer/MarginContainer/VBoxContainer"]
 layout_mode = 2
 text = "Look: RMB"
+
+[node name="Select" type="Label" parent="UI/Controls/PanelContainer/MarginContainer/VBoxContainer"]
+layout_mode = 2
+text = "Select: LMB"
 
 [node name="Gizmo" type="Label" parent="UI/Controls/PanelContainer/MarginContainer/VBoxContainer"]
 layout_mode = 2
