@@ -3,11 +3,12 @@ using static Godot.RenderingServer;
 
 namespace Gizmo3DPlugin;
 
-/*
-Translated from C++ to C# with alterations, from:
-    - https://github.com/godotengine/godot/blob/master/editor/plugins/node_3d_editor_plugin.h
-    - https://github.com/godotengine/godot/blob/master/editor/plugins/node_3d_editor_plugin.cpp
-*/
+/// <summary>
+/// Translated from C++ to C# with alterations, from:
+/// - https://github.com/godotengine/godot/blob/master/editor/plugins/node_3d_editor_plugin.h
+/// - https://github.com/godotengine/godot/blob/master/editor/plugins/node_3d_editor_plugin.cpp
+/// </summary>
+
 public partial class Gizmo3D : Node3D
 {
 
@@ -22,12 +23,16 @@ public partial class Gizmo3D : Node3D
     const float GIZMO_SCALE_OFFSET = GIZMO_CIRCLE_SIZE - 0.3f;
     const float GIZMO_ARROW_OFFSET = GIZMO_CIRCLE_SIZE + 0.15f;
 
-    // Used to limit the which transformations are being edited.
+    /// <summary>
+    /// Used to limit the which transformations are being edited.
+    /// </summary>
     [Export]
     public ToolMode Mode { get; set; } = ToolMode.All;
 
     uint layers = 1;
-    // The 3D render layers this gizmo is visible on.
+    /// <summary>
+    /// The 3D render layers this gizmo is visible on.
+    /// </summary>
     [Export(PropertyHint.Layers3DRender)]
     public uint Layers
     {
@@ -50,15 +55,23 @@ public partial class Gizmo3D : Node3D
         }
     }
 
-    // The node this gizmo will apply transformations to.
+    /// <summary>
+    /// The node this gizmo will apply transformations to.
+    /// </summary>
     [Export]
     public Node3D Target { get; set; }
-    // Whether or not transformations will be snapped to RotateSnap, ScaleSnap, and/or TranslateSnap.
+    /// <summary>
+    /// Whether or not transformations will be snapped to RotateSnap, ScaleSnap, and/or TranslateSnap.
+    /// </summary>
     public bool Snapping { get; private set; }
-    // A displayable message describing the current transformation being applied, for example "Rotating: {60.000} degrees".
+    /// <summary>
+    /// A displayable message describing the current transformation being applied, for example "Rotating: {60.000} degrees".
+    /// </summary>
     public string Message { get; private set; }
 
-    // If the user is currently interacting with is gizmo.
+    /// <summary>
+    /// If the user is currently interacting with is gizmo.
+    /// </summary>
     bool editing;
     public bool Editing
     {
@@ -71,22 +84,30 @@ public partial class Gizmo3D : Node3D
         }
     }
 
-    // If the user is currently hovering over a gizmo.
+    /// <summary>
+    /// If the user is currently hovering over a gizmo.
+    /// </summary>
     public bool Hovering { get; private set; }
 
     [ExportGroup("Style")]
-    // The size of the gizmo before distance based scaling is applied.
+    /// <summary>
+    /// The size of the gizmo before distance based scaling is applied.
+    /// </summary>
     [Export(PropertyHint.Range, "30,200")]
     public float Size { get; set; } = 80.0f;
     // If the X/Y/Z axes extending to infinity are drawn.
     [Export]
     public bool ShowAxes { get; set; } = true;
-    // If the box encapsulating the target node is drawn.
+    /// <summary>
+    /// If the box encapsulating the target node is drawn.
+    /// </summary>
     [Export]
     public bool ShowSelectionBox { get; set; } = true;
 
-    // Alpha value for all gizmos and the selection box.
     float opacity = .9f;
+    /// <summary>
+    /// Alpha value for all gizmos and the selection box.
+    /// </summary>
     [Export(PropertyHint.Range, "0,1")]
     public float Opacity
     {
@@ -99,13 +120,15 @@ public partial class Gizmo3D : Node3D
         }
     }
 
-    // The colors of the gizmos. 0 is the X axis, 1 is the Y axis, and 2 is the Z axis.
     Color[] colors = new Color[]
     {
         new(0.96f, 0.20f, 0.32f),
         new(0.53f, 0.84f, 0.01f),
         new(0.16f, 0.55f, 0.96f)
     };
+    /// <summary>
+    /// The colors of the gizmos. 0 is the X axis, 1 is the Y axis, and 2 is the Z axis.
+    /// </summary>
     [Export(PropertyHint.ColorNoAlpha)]
     public Color[] Colors
     {
@@ -118,8 +141,10 @@ public partial class Gizmo3D : Node3D
         }
     }
 
-    // The color of the AABB surrounding the target node.
     Color selectionBoxColor = new(1.0f, 0.5f, 0);
+    /// <summary>
+    /// The color of the AABB surrounding the target node.
+    /// </summary>
     [Export(PropertyHint.ColorNoAlpha)]
     public Color SelectionBoxColor
     {
@@ -136,16 +161,24 @@ public partial class Gizmo3D : Node3D
     }
 
     [ExportGroup("Position")]
-    // Whether the transformations are applied to the target in local or global space.
+    /// <summary>
+    /// Whether the transformations are applied to the target in local or global space.
+    /// </summary>
     [Export]
     public bool LocalCoords { get; set; }
-    // Value to snap rotations to, if enabled.
+    /// <summary>
+    /// Value to snap rotations to, if enabled.
+    /// </summary>
     [Export(PropertyHint.Range, "0,360")]
     public float RotateSnap { get; set; } = 15.0f;
-    // Value to snap translations to, if enabled.
+    /// <summary>
+    /// Value to snap translations to, if enabled.
+    /// </summary>
     [Export(PropertyHint.Range, "0,10")]
     public float TranslateSnap { get; set; } = 1.0f;
-    // Value to snap scaling to, if enabled.
+    /// <summary>
+    /// Value to snap scaling to, if enabled.
+    /// </summary>
     [Export(PropertyHint.Range, "0,5")]
     public float ScaleSnap { get; set; } = .25f;
 
