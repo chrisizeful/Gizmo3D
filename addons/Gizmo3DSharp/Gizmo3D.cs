@@ -8,7 +8,6 @@ namespace Gizmo3DPlugin;
 /// - https://github.com/godotengine/godot/blob/master/editor/plugins/node_3d_editor_plugin.h
 /// - https://github.com/godotengine/godot/blob/master/editor/plugins/node_3d_editor_plugin.cpp
 /// </summary>
-
 public partial class Gizmo3D : Node3D
 {
 
@@ -189,11 +188,11 @@ public partial class Gizmo3D : Node3D
     ArrayMesh[] ScalePlaneGizmo = new ArrayMesh[3];
     ArrayMesh[] AxisGizmo = new ArrayMesh[3];
     StandardMaterial3D[] GizmoColor = new StandardMaterial3D[3];
-	StandardMaterial3D[] PlaneGizmoColor = new StandardMaterial3D[3];
-	ShaderMaterial[] RotateGizmoColor = new ShaderMaterial[4];
-	StandardMaterial3D[] GizmoColorHl = new StandardMaterial3D[3];
-	StandardMaterial3D[] PlaneGizmoColorHl = new StandardMaterial3D[3];
-	ShaderMaterial[] RotateGizmoColorHl = new ShaderMaterial[3];
+    StandardMaterial3D[] PlaneGizmoColor = new StandardMaterial3D[3];
+    ShaderMaterial[] RotateGizmoColor = new ShaderMaterial[4];
+    StandardMaterial3D[] GizmoColorHl = new StandardMaterial3D[3];
+    StandardMaterial3D[] PlaneGizmoColorHl = new StandardMaterial3D[3];
+    ShaderMaterial[] RotateGizmoColorHl = new ShaderMaterial[3];
 
     Rid[] MoveGizmoInstance = new Rid[3];
     Rid[] MovePlaneGizmoInstance = new Rid[3];
