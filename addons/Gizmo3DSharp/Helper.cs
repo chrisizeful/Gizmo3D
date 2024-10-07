@@ -5,12 +5,12 @@ namespace Gizmo3DPlugin;
 public static class Helper
 {
 
-	public static void SetOnTopOfAlpha(this BaseMaterial3D material, bool alpha = false)
-	{
-		material.Transparency = alpha ? BaseMaterial3D.TransparencyEnum.Alpha : BaseMaterial3D.TransparencyEnum.Disabled;
-		material.RenderPriority = (int) Material.RenderPriorityMax;
-		material.NoDepthTest = true;
-	}
+    public static void SetOnTopOfAlpha(this BaseMaterial3D material, bool alpha = false)
+    {
+        material.Transparency = alpha ? BaseMaterial3D.TransparencyEnum.Alpha : BaseMaterial3D.TransparencyEnum.Disabled;
+        material.RenderPriority = (int) Material.RenderPriorityMax;
+        material.NoDepthTest = true;
+    }
 
     public static void GetEdge(this Aabb aabb, int p_edge, out Vector3 r_from, out Vector3 r_to)
     {
@@ -83,18 +83,18 @@ public static class Helper
     }
 
     public static Basis ScaledOrthogonal(this Basis basis, Vector3 scale)
-	{
-		Vector3 s = new Vector3(-1, -1, -1) + scale;
-		bool sign = (s.X + s.Y + s.Z) < 0;
-		Basis b = basis.Orthonormalized();
-		s *= b;
-		Vector3 dots = Vector3.Zero;
-		for (int i = 0; i < 3; i++)
-			for (int j = 0; j < 3; j++)
-				dots[j] += s[i] * Mathf.Abs(basis[i].Normalized().Dot(b[j]));
-		if (sign != ((dots.X + dots.Y + dots.Z) < 0))
-			dots = -dots;
-		basis *= Basis.FromScale(Vector3.One + dots);
-		return basis;
-	}
+    {
+        Vector3 s = new Vector3(-1, -1, -1) + scale;
+        bool sign = (s.X + s.Y + s.Z) < 0;
+        Basis b = basis.Orthonormalized();
+        s *= b;
+        Vector3 dots = Vector3.Zero;
+        for (int i = 0; i < 3; i++)
+            for (int j = 0; j < 3; j++)
+                dots[j] += s[i] * Mathf.Abs(basis[i].Normalized().Dot(b[j]));
+        if (sign != ((dots.X + dots.Y + dots.Z) < 0))
+            dots = -dots;
+        basis *= Basis.FromScale(Vector3.One + dots);
+        return basis;
+    }
 }
