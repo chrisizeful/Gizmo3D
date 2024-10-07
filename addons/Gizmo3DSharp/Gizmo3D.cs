@@ -49,8 +49,12 @@ public partial class Gizmo3D : Node3D
                 InstanceSetLayerMask(ScaleGizmoInstance[i], Layers);
                 InstanceSetLayerMask(ScalePlaneGizmoInstance[i], Layers);
                 InstanceSetLayerMask(AxisGizmoInstance[i], Layers);
-                InstanceSetLayerMask(RotateGizmoInstance[3], Layers);
             }
+            InstanceSetLayerMask(RotateGizmoInstance[3], Layers);
+            InstanceSetLayerMask(SboxInstance, Layers);
+            InstanceSetLayerMask(SboxInstanceOffset, Layers);
+            InstanceSetLayerMask(SboxXrayInstance, Layers);
+            InstanceSetLayerMask(SboxXrayInstanceOffset, Layers);
         }
     }
 

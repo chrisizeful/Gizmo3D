@@ -39,7 +39,11 @@ var layers: int:
 			RenderingServer.instance_set_layer_mask(_scale_gizmo_instance[i], _layers)
 			RenderingServer.instance_set_layer_mask(_scale_plane_gizmo_instance[i], _layers)
 			RenderingServer.instance_set_layer_mask(_axis_gizmo_instance[i], _layers)
-			RenderingServer.instance_set_layer_mask(_rotate_gizmo_instance[i], _layers)
+		RenderingServer.instance_set_layer_mask(_rotate_gizmo_instance[3], _layers)
+		RenderingServer.instance_set_layer_mask(_sbox_instance, _layers)
+		RenderingServer.instance_set_layer_mask(_sbox_instance_offset, _layers)
+		RenderingServer.instance_set_layer_mask(_sbox_xray_instance, _layers)
+		RenderingServer.instance_set_layer_mask(_sbox_xray_instance_offset, _layers)
 
 ## The node this gizmo will apply transformations to.
 @export
