@@ -19,8 +19,7 @@ const GIZMO_SCALE_OFFSET := GIZMO_CIRCLE_SIZE - .3
 const GIZMO_ARROW_OFFSET := GIZMO_CIRCLE_SIZE + .15
 
 ## Used to limit the which transformations are being edited.
-@export
-var mode := ToolMode.ALL
+@export_flags("Move", "Rotate", "Scale") var mode = ToolMode.MOVE | ToolMode.SCALE | ToolMode.ROTATE
 
 @export_flags_3d_render
 var _layers := 1
@@ -173,7 +172,7 @@ var _sbox_xray_instance_offset : RID
 var _edit := EditData.new()
 var _gizmo_scale := 1.0
 
-enum ToolMode { ALL, MOVE, ROTATE, SCALE }
+enum ToolMode { MOVE = 1, ROTATE = 2, SCALE = 4, ALL = 7 }
 enum TransformMode { NONE, ROTATE, TRANSLATE, SCALE }
 enum TransformPlane { VIEW, X, Y, Z, YZ, XZ, XY }
 
@@ -663,15 +662,15 @@ func _update_transform_gizmo_view() -> void:
 		axis_angle.basis *= basis.scaled(scale)
 		axis_angle.origin = xform.origin
 		RenderingServer.instance_set_transform(_move_gizmo_instance[i], axis_angle)
-		RenderingServer.instance_set_visible(_move_gizmo_instance[i], mode == ToolMode.ALL || mode == ToolMode.MOVE)
+		RenderingServer.instance_set_visible(_move_gizmo_instance[i], mode & ToolMode.MOVE)
 		RenderingServer.instance_set_transform(_move_plane_gizmo_instance[i], axis_angle)
-		RenderingServer.instance_set_visible(_move_plane_gizmo_instance[i], mode == ToolMode.ALL || mode == ToolMode.MOVE)
+		RenderingServer.instance_set_visible(_move_plane_gizmo_instance[i], mode & ToolMode.MOVE)
 		RenderingServer.instance_set_transform(_rotate_gizmo_instance[i], axis_angle)
-		RenderingServer.instance_set_visible(_rotate_gizmo_instance[i], mode == ToolMode.ALL || mode == ToolMode.ROTATE)
+		RenderingServer.instance_set_visible(_rotate_gizmo_instance[i], mode & ToolMode.ROTATE)
 		RenderingServer.instance_set_transform(_scale_gizmo_instance[i], axis_angle)
-		RenderingServer.instance_set_visible(_scale_gizmo_instance[i], mode == ToolMode.ALL || mode == ToolMode.SCALE)
+		RenderingServer.instance_set_visible(_scale_gizmo_instance[i], mode & ToolMode.SCALE)
 		RenderingServer.instance_set_transform(_scale_plane_gizmo_instance[i], axis_angle)
-		RenderingServer.instance_set_visible(_scale_plane_gizmo_instance[i], mode == ToolMode.SCALE)
+		RenderingServer.instance_set_visible(_scale_plane_gizmo_instance[i], mode & ToolMode.SCALE)
 		RenderingServer.instance_set_transform(_axis_gizmo_instance[i], xform)
 	
 	var show := show_axes and editing
@@ -683,7 +682,7 @@ func _update_transform_gizmo_view() -> void:
 	xform = xform.orthonormalized()
 	xform.basis *= xform.basis.scaled(scale)
 	RenderingServer.instance_set_transform(_rotate_gizmo_instance[3], xform)
-	RenderingServer.instance_set_visible(_rotate_gizmo_instance[3], mode == ToolMode.ALL || mode == ToolMode.ROTATE)
+	RenderingServer.instance_set_visible(_rotate_gizmo_instance[3], mode & ToolMode.ROTATE)
 	
 	# Selection box
 	var t := Transform3D.IDENTITY
@@ -823,7 +822,7 @@ func _transform_gizmo_select(screen_pos: Vector2, highlight_only: bool = false):
 	var ray := _get_ray(screen_pos)
 	var gt := transform
 	
-	if mode == ToolMode.ALL || mode == ToolMode.MOVE:
+	if mode & ToolMode.MOVE:
 		var col_axis := -1
 		var colD : float = 1e20
 		
@@ -881,7 +880,7 @@ func _transform_gizmo_select(screen_pos: Vector2, highlight_only: bool = false):
 					_edit.plane += 3
 			return true
 		
-	if mode == ToolMode.ALL || mode == ToolMode.ROTATE:
+	if mode & ToolMode.ROTATE:
 		var col_axis := -1
 		
 		var ray_length = gt.origin.distance_to(ray_pos) + (GIZMO_CIRCLE_SIZE * _gizmo_scale) * 4.0
@@ -924,7 +923,7 @@ func _transform_gizmo_select(screen_pos: Vector2, highlight_only: bool = false):
 				_edit.plane = TransformPlane.X + col_axis
 			return true
 	
-	if mode == ToolMode.ALL || mode == ToolMode.SCALE:
+	if mode & ToolMode.SCALE:
 		var col_axis := -1
 		var colD : float = 1e20
 		
