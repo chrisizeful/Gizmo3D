@@ -252,7 +252,7 @@ func _init_gizmo_instance() -> void:
 	for i in range(3):
 		_move_gizmo_instance[i] = RenderingServer.instance_create()
 		RenderingServer.instance_set_base(_move_gizmo_instance[i], _move_gizmo[i].get_rid())
-		RenderingServer.instance_set_scenario(_move_gizmo_instance[i], get_tree().root.world_3d.scenario)
+		RenderingServer.instance_set_scenario(_move_gizmo_instance[i], get_world_3d().scenario)
 		RenderingServer.instance_geometry_set_cast_shadows_setting(_move_gizmo_instance[i], RenderingServer.ShadowCastingSetting.SHADOW_CASTING_SETTING_OFF)
 		RenderingServer.instance_set_layer_mask(_move_gizmo_instance[i], layers)
 		RenderingServer.instance_geometry_set_flag(_move_gizmo_instance[i], RenderingServer.InstanceFlags.INSTANCE_FLAG_IGNORE_OCCLUSION_CULLING, true)
@@ -260,7 +260,7 @@ func _init_gizmo_instance() -> void:
 		
 		_move_plane_gizmo_instance[i] = RenderingServer.instance_create()
 		RenderingServer.instance_set_base(_move_plane_gizmo_instance[i], _move_plane_gizmo[i].get_rid())
-		RenderingServer.instance_set_scenario(_move_plane_gizmo_instance[i], get_tree().root.world_3d.scenario)
+		RenderingServer.instance_set_scenario(_move_plane_gizmo_instance[i], get_world_3d().scenario)
 		RenderingServer.instance_geometry_set_cast_shadows_setting(_move_plane_gizmo_instance[i], RenderingServer.ShadowCastingSetting.SHADOW_CASTING_SETTING_OFF)
 		RenderingServer.instance_set_layer_mask(_move_plane_gizmo_instance[i], layers)
 		RenderingServer.instance_geometry_set_flag(_move_plane_gizmo_instance[i], RenderingServer.InstanceFlags.INSTANCE_FLAG_IGNORE_OCCLUSION_CULLING, true)
@@ -268,7 +268,7 @@ func _init_gizmo_instance() -> void:
 		
 		_rotate_gizmo_instance[i] = RenderingServer.instance_create()
 		RenderingServer.instance_set_base(_rotate_gizmo_instance[i], _rotate_gizmo[i].get_rid())
-		RenderingServer.instance_set_scenario(_rotate_gizmo_instance[i], get_tree().root.world_3d.scenario)
+		RenderingServer.instance_set_scenario(_rotate_gizmo_instance[i], get_world_3d().scenario)
 		RenderingServer.instance_geometry_set_cast_shadows_setting(_rotate_gizmo_instance[i], RenderingServer.ShadowCastingSetting.SHADOW_CASTING_SETTING_OFF)
 		RenderingServer.instance_set_layer_mask(_rotate_gizmo_instance[i], layers)
 		RenderingServer.instance_geometry_set_flag(_rotate_gizmo_instance[i], RenderingServer.InstanceFlags.INSTANCE_FLAG_IGNORE_OCCLUSION_CULLING, true)
@@ -276,7 +276,7 @@ func _init_gizmo_instance() -> void:
 		
 		_scale_gizmo_instance[i] = RenderingServer.instance_create()
 		RenderingServer.instance_set_base(_scale_gizmo_instance[i], _scale_gizmo[i].get_rid())
-		RenderingServer.instance_set_scenario(_scale_gizmo_instance[i], get_tree().root.world_3d.scenario)
+		RenderingServer.instance_set_scenario(_scale_gizmo_instance[i], get_world_3d().scenario)
 		RenderingServer.instance_geometry_set_cast_shadows_setting(_scale_gizmo_instance[i], RenderingServer.ShadowCastingSetting.SHADOW_CASTING_SETTING_OFF)
 		RenderingServer.instance_set_layer_mask(_scale_gizmo_instance[i], layers)
 		RenderingServer.instance_geometry_set_flag(_scale_gizmo_instance[i], RenderingServer.InstanceFlags.INSTANCE_FLAG_IGNORE_OCCLUSION_CULLING, true)
@@ -284,7 +284,7 @@ func _init_gizmo_instance() -> void:
 		
 		_scale_plane_gizmo_instance[i] = RenderingServer.instance_create()
 		RenderingServer.instance_set_base(_scale_plane_gizmo_instance[i], _scale_plane_gizmo[i].get_rid())
-		RenderingServer.instance_set_scenario(_scale_plane_gizmo_instance[i], get_tree().root.world_3d.scenario)
+		RenderingServer.instance_set_scenario(_scale_plane_gizmo_instance[i], get_world_3d().scenario)
 		RenderingServer.instance_geometry_set_cast_shadows_setting(_scale_plane_gizmo_instance[i], RenderingServer.ShadowCastingSetting.SHADOW_CASTING_SETTING_OFF)
 		RenderingServer.instance_set_layer_mask(_scale_plane_gizmo_instance[i], layers)
 		RenderingServer.instance_geometry_set_flag(_scale_plane_gizmo_instance[i], RenderingServer.InstanceFlags.INSTANCE_FLAG_IGNORE_OCCLUSION_CULLING, true)
@@ -292,7 +292,7 @@ func _init_gizmo_instance() -> void:
 		
 		_axis_gizmo_instance[i] = RenderingServer.instance_create()
 		RenderingServer.instance_set_base(_axis_gizmo_instance[i], _axis_gizmo[i].get_rid())
-		RenderingServer.instance_set_scenario(_axis_gizmo_instance[i], get_tree().root.world_3d.scenario)
+		RenderingServer.instance_set_scenario(_axis_gizmo_instance[i], get_world_3d().scenario)
 		RenderingServer.instance_geometry_set_cast_shadows_setting(_axis_gizmo_instance[i], RenderingServer.ShadowCastingSetting.SHADOW_CASTING_SETTING_OFF)
 		RenderingServer.instance_set_layer_mask(_axis_gizmo_instance[i], layers)
 		RenderingServer.instance_geometry_set_flag(_axis_gizmo_instance[i], RenderingServer.InstanceFlags.INSTANCE_FLAG_IGNORE_OCCLUSION_CULLING, true)
@@ -300,7 +300,7 @@ func _init_gizmo_instance() -> void:
 	
 	_rotate_gizmo_instance[3] = RenderingServer.instance_create()
 	RenderingServer.instance_set_base(_rotate_gizmo_instance[3], _rotate_gizmo[3].get_rid())
-	RenderingServer.instance_set_scenario(_rotate_gizmo_instance[3], get_tree().root.world_3d.scenario)
+	RenderingServer.instance_set_scenario(_rotate_gizmo_instance[3], get_world_3d().scenario)
 	RenderingServer.instance_geometry_set_cast_shadows_setting(_rotate_gizmo_instance[3], RenderingServer.ShadowCastingSetting.SHADOW_CASTING_SETTING_OFF)
 	RenderingServer.instance_set_layer_mask(_rotate_gizmo_instance[3], layers)
 	RenderingServer.instance_geometry_set_flag(_rotate_gizmo_instance[3], RenderingServer.InstanceFlags.INSTANCE_FLAG_IGNORE_OCCLUSION_CULLING, true)
