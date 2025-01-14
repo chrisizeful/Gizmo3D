@@ -301,7 +301,7 @@ public partial class Gizmo3D : Node3D
         {
             MoveGizmoInstance[i] = InstanceCreate();
             InstanceSetBase(MoveGizmoInstance[i], MoveGizmo[i].GetRid());
-            InstanceSetScenario(MoveGizmoInstance[i], GetTree().Root.World3D.Scenario);
+            InstanceSetScenario(MoveGizmoInstance[i], GetWorld3D().Scenario);
             InstanceGeometrySetCastShadowsSetting(MoveGizmoInstance[i], ShadowCastingSetting.Off);
             InstanceSetLayerMask(MoveGizmoInstance[i], Layers);
             InstanceGeometrySetFlag(MoveGizmoInstance[i], InstanceFlags.IgnoreOcclusionCulling, true);
@@ -309,7 +309,7 @@ public partial class Gizmo3D : Node3D
 
             MovePlaneGizmoInstance[i] = InstanceCreate();
             InstanceSetBase(MovePlaneGizmoInstance[i], MovePlaneGizmo[i].GetRid());
-            InstanceSetScenario(MovePlaneGizmoInstance[i], GetTree().Root.World3D.Scenario);
+            InstanceSetScenario(MovePlaneGizmoInstance[i], GetWorld3D().Scenario);
             InstanceGeometrySetCastShadowsSetting(MovePlaneGizmoInstance[i], ShadowCastingSetting.Off);
             InstanceSetLayerMask(MovePlaneGizmoInstance[i], Layers);
             InstanceGeometrySetFlag(MovePlaneGizmoInstance[i], InstanceFlags.IgnoreOcclusionCulling, true);
@@ -317,7 +317,7 @@ public partial class Gizmo3D : Node3D
 
             RotateGizmoInstance[i] = InstanceCreate();
             InstanceSetBase(RotateGizmoInstance[i], RotateGizmo[i].GetRid());
-            InstanceSetScenario(RotateGizmoInstance[i], GetTree().Root.World3D.Scenario);
+            InstanceSetScenario(RotateGizmoInstance[i], GetWorld3D().Scenario);
             InstanceGeometrySetCastShadowsSetting(RotateGizmoInstance[i], ShadowCastingSetting.Off);
             InstanceSetLayerMask(RotateGizmoInstance[i], Layers);
             InstanceGeometrySetFlag(RotateGizmoInstance[i], InstanceFlags.IgnoreOcclusionCulling, true);
@@ -325,7 +325,7 @@ public partial class Gizmo3D : Node3D
 
             ScaleGizmoInstance[i] = InstanceCreate();
             InstanceSetBase(ScaleGizmoInstance[i], ScaleGizmo[i].GetRid());
-            InstanceSetScenario(ScaleGizmoInstance[i], GetTree().Root.World3D.Scenario);
+            InstanceSetScenario(ScaleGizmoInstance[i], GetWorld3D().Scenario);
             InstanceGeometrySetCastShadowsSetting(ScaleGizmoInstance[i], ShadowCastingSetting.Off);
             InstanceSetLayerMask(ScaleGizmoInstance[i], Layers);
             InstanceGeometrySetFlag(ScaleGizmoInstance[i], InstanceFlags.IgnoreOcclusionCulling, true);
@@ -333,7 +333,7 @@ public partial class Gizmo3D : Node3D
 
             ScalePlaneGizmoInstance[i] = InstanceCreate();
             InstanceSetBase(ScalePlaneGizmoInstance[i], ScalePlaneGizmo[i].GetRid());
-            InstanceSetScenario(ScalePlaneGizmoInstance[i], GetTree().Root.World3D.Scenario);
+            InstanceSetScenario(ScalePlaneGizmoInstance[i], GetWorld3D().Scenario);
             InstanceGeometrySetCastShadowsSetting(ScalePlaneGizmoInstance[i], ShadowCastingSetting.Off);
             InstanceSetLayerMask(ScalePlaneGizmoInstance[i], Layers);
             InstanceGeometrySetFlag(ScalePlaneGizmoInstance[i], InstanceFlags.IgnoreOcclusionCulling, true);
@@ -341,7 +341,7 @@ public partial class Gizmo3D : Node3D
 
             AxisGizmoInstance[i] = InstanceCreate();
             InstanceSetBase(AxisGizmoInstance[i], AxisGizmo[i].GetRid());
-            InstanceSetScenario(AxisGizmoInstance[i], GetTree().Root.World3D.Scenario);
+            InstanceSetScenario(AxisGizmoInstance[i], GetWorld3D().Scenario);
             InstanceGeometrySetCastShadowsSetting(AxisGizmoInstance[i], ShadowCastingSetting.Off);
             InstanceSetLayerMask(AxisGizmoInstance[i], Layers);
             InstanceGeometrySetFlag(AxisGizmoInstance[i], InstanceFlags.IgnoreOcclusionCulling, true);
@@ -351,7 +351,7 @@ public partial class Gizmo3D : Node3D
         // Rotation white outline
         RotateGizmoInstance[3] = InstanceCreate();
         InstanceSetBase(RotateGizmoInstance[3], RotateGizmo[3].GetRid());
-        InstanceSetScenario(RotateGizmoInstance[3], GetTree().Root.World3D.Scenario);
+        InstanceSetScenario(RotateGizmoInstance[3], GetWorld3D().Scenario);
         InstanceGeometrySetCastShadowsSetting(RotateGizmoInstance[3], ShadowCastingSetting.Off);
         InstanceSetLayerMask(RotateGizmoInstance[3], Layers);
         InstanceGeometrySetFlag(RotateGizmoInstance[3], InstanceFlags.IgnoreOcclusionCulling, true);
