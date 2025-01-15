@@ -670,7 +670,7 @@ func _update_transform_gizmo_view() -> void:
 		RenderingServer.instance_set_transform(_scale_gizmo_instance[i], axis_angle)
 		RenderingServer.instance_set_visible(_scale_gizmo_instance[i], mode & ToolMode.SCALE)
 		RenderingServer.instance_set_transform(_scale_plane_gizmo_instance[i], axis_angle)
-		RenderingServer.instance_set_visible(_scale_plane_gizmo_instance[i], mode & ToolMode.SCALE)
+		RenderingServer.instance_set_visible(_scale_plane_gizmo_instance[i], mode == ToolMode.SCALE)
 		RenderingServer.instance_set_transform(_axis_gizmo_instance[i], xform)
 	
 	var show := show_axes and editing
