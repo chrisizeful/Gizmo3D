@@ -1,3 +1,4 @@
+using System;
 using Godot;
 using static Godot.RenderingServer;
 
@@ -23,10 +24,10 @@ public partial class Gizmo3D : Node3D
     const float GIZMO_ARROW_OFFSET = GIZMO_CIRCLE_SIZE + 0.15f;
 
     /// <summary>
-    /// Used to limit the which transformations are being edited.
+    /// Used to limit which transformations are being edited.
     /// </summary>
-    [Export]
-    public ToolMode Mode { get; set; } = ToolMode.All;
+    [Export(PropertyHint.Flags)]
+    public ToolMode Mode { get; set; } = ToolMode.Move | ToolMode.Scale | ToolMode.Rotate;
 
     uint layers = 1;
     /// <summary>
@@ -213,7 +214,8 @@ public partial class Gizmo3D : Node3D
     EditData Edit = new();
     float GizmoScale = 1.0f;
 
-    public enum ToolMode { All, Move, Rotate, Scale };
+    [Flags]
+    public enum ToolMode { Move = 1, Rotate = 2, Scale = 4, All = 7 };
     enum TransformMode { None, Rotate, Translate, Scale };
     enum TransformPlane { View, X, Y, Z, YZ, XZ, XY, };
 
@@ -764,13 +766,13 @@ void fragment() {
             axisAngle.Basis *= Basis.Scaled(scale);
             axisAngle.Origin = xform.Origin;
             InstanceSetTransform(MoveGizmoInstance[i], axisAngle);
-            InstanceSetVisible(MoveGizmoInstance[i], Mode == ToolMode.All || Mode == ToolMode.Move);
+            InstanceSetVisible(MoveGizmoInstance[i], (Mode & ToolMode.Move) == ToolMode.Move);
             InstanceSetTransform(MovePlaneGizmoInstance[i], axisAngle);
-            InstanceSetVisible(MovePlaneGizmoInstance[i], Mode == ToolMode.All || Mode == ToolMode.Move);
+            InstanceSetVisible(MovePlaneGizmoInstance[i], (Mode & ToolMode.Move) == ToolMode.Move);
             InstanceSetTransform(RotateGizmoInstance[i], axisAngle);
-            InstanceSetVisible(RotateGizmoInstance[i], Mode == ToolMode.All || Mode == ToolMode.Rotate);
+            InstanceSetVisible(RotateGizmoInstance[i], (Mode & ToolMode.Rotate) == ToolMode.Rotate);
             InstanceSetTransform(ScaleGizmoInstance[i], axisAngle);
-            InstanceSetVisible(ScaleGizmoInstance[i], Mode == ToolMode.All || Mode == ToolMode.Scale);
+            InstanceSetVisible(ScaleGizmoInstance[i], (Mode & ToolMode.Scale) == ToolMode.Scale);
             InstanceSetTransform(ScalePlaneGizmoInstance[i], axisAngle);
             InstanceSetVisible(ScalePlaneGizmoInstance[i], Mode == ToolMode.Scale);
             InstanceSetTransform(AxisGizmoInstance[i], xform);
@@ -785,7 +787,7 @@ void fragment() {
         xform = xform.Orthonormalized();
         xform.Basis *= xform.Basis.Scaled(scale);
         InstanceSetTransform(RotateGizmoInstance[3], xform);
-        InstanceSetVisible(RotateGizmoInstance[3], Mode == ToolMode.All || Mode == ToolMode.Rotate);
+        InstanceSetVisible(RotateGizmoInstance[3], (Mode & ToolMode.Rotate) == ToolMode.Rotate);
 
         // Selection box
         Transform3D t = Transform3D.Identity;
@@ -932,7 +934,7 @@ void fragment() {
         Vector3 ray = GetRay(screenpos);
         Transform3D gt = Transform;
 
-        if (Mode == ToolMode.All || Mode == ToolMode.Move)
+        if ((Mode & ToolMode.Move) == ToolMode.Move)
         {
             int colAxis = -1;
             float colD = 1e20F;
@@ -1009,7 +1011,7 @@ void fragment() {
             }
         }
 
-        if (Mode == ToolMode.All || Mode == ToolMode.Rotate)
+        if ((Mode & ToolMode.Rotate) == ToolMode.Rotate)
         {
             int colAxis = -1;
 
@@ -1074,7 +1076,7 @@ void fragment() {
             }
         }
 
-        if (Mode == ToolMode.All || Mode == ToolMode.Scale)
+        if ((Mode & ToolMode.Scale) == ToolMode.Scale)
         {
             int colAxis = -1;
             float colD = 1e20F;
