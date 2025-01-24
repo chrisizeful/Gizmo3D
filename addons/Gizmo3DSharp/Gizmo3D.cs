@@ -1176,7 +1176,7 @@ void fragment() {
                 Transform3D s = Transform3D.Identity;
                 if (local)
                 {
-                    s.Basis = original.Basis * Basis.Scaled(motion + Vector3.One);
+                    s.Basis = originalLocal.Basis * Basis.FromScale(motion + Vector3.One);
                     s.Origin = originalLocal.Origin;
                 }
                 else

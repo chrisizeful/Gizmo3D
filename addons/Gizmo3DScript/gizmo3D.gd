@@ -1001,7 +1001,7 @@ func _compute_transform(mode: TransformMode, original: Transform3D, original_loc
 				motion = motion.snappedf(extra)
 			var s := Transform3D.IDENTITY
 			if local:
-				s.basis = original.basis * basis.scaled(motion + Vector3.ONE)
+				s.basis = original_local.basis * basis.from_scale(motion + Vector3.ONE)
 				s.origin = original_local.origin
 			else:
 				s.basis = s.basis.scaled(motion + Vector3.ONE)
