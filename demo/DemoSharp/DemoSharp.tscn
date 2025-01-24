@@ -49,6 +49,7 @@ mesh = SubResource("PlaneMesh_5ilx2")
 skeleton = NodePath("../..")
 
 [node name="coin" parent="Objects" instance=ExtResource("3_an4dy")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
 
 [node name="barrel" parent="Objects" instance=ExtResource("4_2y4ol")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0, -1)
@@ -109,6 +110,10 @@ text = "Gizmo: LMB"
 [node name="Snap" type="Label" parent="UI/Controls/PanelContainer/MarginContainer/VBoxContainer"]
 layout_mode = 2
 text = "Snap: CTRL"
+
+[node name="LocalSpace" type="Label" parent="UI/Controls/PanelContainer/MarginContainer/VBoxContainer"]
+layout_mode = 2
+text = "Local Space: T"
 
 [node name="Message" type="Label" parent="UI"]
 offset_right = 40.0

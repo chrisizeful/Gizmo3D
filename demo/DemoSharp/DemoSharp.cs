@@ -8,8 +8,12 @@ public partial class DemoSharp : Node3D
 	[Export]
 	public Gizmo3D Gizmo { get; private set; }
 
+	readonly StringName useLocalSpace = "use_local_space";
+
     public override void _UnhandledInput(InputEvent @event)
     {
+		if (!Gizmo.Editing && @event.IsActionPressed(useLocalSpace))
+			Gizmo.UseLocalSpace = !Gizmo.UseLocalSpace;
 		// Prevent object picking is user is interacting with the gizmo
 		if (Gizmo.Hovering || Gizmo.Editing)
 			return;
@@ -26,7 +30,8 @@ public partial class DemoSharp : Node3D
 			if (result.Count == 0)
 				return;
 			Node collider = (Node) result["collider"];
-			Gizmo.Target = collider.GetParent<Node3D>();
+			if (Gizmo.Target != collider.GetParent<Node3D>())
+				Gizmo.Target = collider.GetParent<Node3D>();
 		}
     }
 }

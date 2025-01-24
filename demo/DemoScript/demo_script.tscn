@@ -41,6 +41,7 @@ script = ExtResource("3_6yall")
 target = NodePath("../Objects/coin")
 _colors = Array[Color]([Color(0.110124, 0.605119, 0.705983, 1), Color(0.073115, 0.456205, 0.535289, 1), Color(0.0479613, 0.352446, 0.415412, 1)])
 _selection_box_color = Color(0.702439, 0.601297, 0.864144, 1)
+use_local_space = true
 
 [node name="Objects" type="Node3D" parent="."]
 
@@ -109,6 +110,10 @@ text = "Gizmo: LMB"
 [node name="Snap" type="Label" parent="UI/Controls/PanelContainer/MarginContainer/VBoxContainer"]
 layout_mode = 2
 text = "Snap: CTRL"
+
+[node name="LocalSpace" type="Label" parent="UI/Controls/PanelContainer/MarginContainer/VBoxContainer"]
+layout_mode = 2
+text = "Local Space: T"
 
 [node name="Message" type="Label" parent="UI"]
 offset_right = 40.0

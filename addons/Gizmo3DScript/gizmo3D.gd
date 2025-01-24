@@ -127,9 +127,9 @@ var selection_box_color: Color:
 		_selection_box_color = value
 
 @export_group("Position")
-## Whether the transformations are applied to the target in local or global space.
+## Whether the gizmo is displayed using the targets local coordinate space, or the global space.
 @export
-var local_coords : bool
+var use_local_space : bool
 ## Value to snap rotations to, if enabled.
 @export_range(0.0, 360.0)
 var rotate_snap := 15.0
@@ -200,7 +200,7 @@ func _ready() -> void:
 	_init_indicators()
 	_set_colors()
 	_init_gizmo_instance()
-	_update_transform_gizmo_view()
+	_update_transform_gizmo()
 	visibility_changed.connect(func(): _set_visibility(visible))
 	
 	layers = _layers
@@ -215,23 +215,22 @@ func _unhandled_input(event: InputEvent) -> void:
 		_snapping = event.pressed
 	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		_editing = event.pressed
-		if !editing:
+		if !_editing:
+			_update_transform_gizmo_view()
 			return
 		_edit.mouse_pos = event.position
 		_editing = _transform_gizmo_select(event.position)
 	elif event is InputEventMouseMotion:
-		if _editing and event.button_mask & MOUSE_BUTTON_MASK_LEFT:
-			_edit.mouse_pos = event.position
-			_update_transform(false)
+		if _editing:
+			if event.button_mask & MOUSE_BUTTON_MASK_LEFT:
+				_edit.mouse_pos = event.position
+				_update_transform(false)
 			return
 		_hovering = _transform_gizmo_select(event.position, true)
 
 func _process(delta: float) -> void:
-	if target == null || !is_instance_valid(target) || target.is_queued_for_deletion():
-		return
-	position = target.position
-	_update_transform_gizmo_view()
-
+	if target != null && is_instance_valid(target) && !target.is_queued_for_deletion():
+		_update_transform_gizmo()
 func _exit_tree() -> void:
 	for i in range(3):
 		RenderingServer.free_rid(_move_gizmo_instance[i])
@@ -632,7 +631,7 @@ func _update_transform_gizmo_view() -> void:
 	
 	var camera := get_viewport().get_camera_3d()
 	var xform := transform
-	var camera_transform := camera.get_camera_transform()
+	var camera_transform := camera.global_transform
 	
 	if xform.origin.is_equal_approx(camera_transform.origin):
 		_set_visibility(false)
@@ -656,10 +655,10 @@ func _update_transform_gizmo_view() -> void:
 		return
 	
 	for i in range(3):
-		var axis_angle := Transform3D.IDENTITY
+		var axis_angle : Transform3D
 		if xform.basis[i].normalized().dot(xform.basis[(i + 1) % 3].normalized()) < 1.0:
 			axis_angle = axis_angle.looking_at(xform.basis[i].normalized(), xform.basis[(i + 1) % 3].normalized())
-		axis_angle.basis *= basis.scaled(scale)
+		axis_angle.basis *= Basis.from_scale(scale)
 		axis_angle.origin = xform.origin
 		RenderingServer.instance_set_transform(_move_gizmo_instance[i], axis_angle)
 		RenderingServer.instance_set_visible(_move_gizmo_instance[i], mode & ToolMode.MOVE)
@@ -685,8 +684,8 @@ func _update_transform_gizmo_view() -> void:
 	RenderingServer.instance_set_visible(_rotate_gizmo_instance[3], mode & ToolMode.ROTATE)
 	
 	# Selection box
-	var t := Transform3D.IDENTITY
-	var t_offset := Transform3D.IDENTITY
+	var t : Transform3D
+	var t_offset : Transform3D
 	if target != null:
 		t = target.global_transform
 		t_offset = target.global_transform
@@ -808,6 +807,13 @@ func _select_gizmo_highlight_axis(axis: int) -> void:
 			_scale_plane_gizmo[i].surface_set_material(0, _plane_gizmo_color_hl[i])
 		else:
 			_scale_plane_gizmo[i].surface_set_material(0, _plane_gizmo_color[i])
+
+func _update_transform_gizmo():
+	if use_local_space:
+		global_transform = target.global_transform;
+	else:
+		global_transform = Transform3D(Basis.IDENTITY, target.global_transform.origin)
+	_update_transform_gizmo_view()
 
 func _transform_gizmo_select(screen_pos: Vector2, highlight_only: bool = false):
 	if !visible:
@@ -999,9 +1005,9 @@ func _compute_transform(mode: TransformMode, original: Transform3D, original_loc
 		TransformMode.SCALE:
 			if snapping:
 				motion = motion.snappedf(extra)
-			var s := Transform3D.IDENTITY
+			var s : Transform3D
 			if local:
-				s.basis = original_local.basis * basis.from_scale(motion + Vector3.ONE)
+				s.basis = original_local.basis * Basis.from_scale(motion + Vector3.ONE)
 				s.origin = original_local.origin
 			else:
 				s.basis = s.basis.scaled(motion + Vector3.ONE)
@@ -1039,8 +1045,8 @@ func _update_transform(shift: bool) -> void:
 	
 	match _edit.mode:
 		TransformMode.SCALE:
-			var smotion_mask := Vector3.ZERO
-			var splane := Plane.PLANE_XY
+			var smotion_mask : Vector3
+			var splane : Plane
 			var splane_mv := false
 			
 			match _edit.plane:
@@ -1094,7 +1100,7 @@ func _update_transform(shift: bool) -> void:
 			smotion /= sclick.distance_to(_edit.center)
 			
 			# Disable local transformation for TRANSFORM_VIEW
-			var slocal_coords := local_coords and _edit.plane != TransformPlane.VIEW
+			var slocal_coords := use_local_space and _edit.plane != TransformPlane.VIEW
 			
 			if snapping:
 				snap = scale_snap
@@ -1109,8 +1115,8 @@ func _update_transform(shift: bool) -> void:
 			
 			_apply_transform(smotion, snap)
 		TransformMode.TRANSLATE:
-			var tmotion_mask := Vector3.ZERO
-			var tplane := Plane.PLANE_XY
+			var tmotion_mask : Vector3
+			var tplane : Plane
 			var tplane_mv = false
 			
 			match _edit.plane:
@@ -1148,7 +1154,7 @@ func _update_transform(shift: bool) -> void:
 				tmotion = tmotion_mask.dot(tmotion) * tmotion_mask
 			
 			# Disable local transformation for TRANSFORM_VIEW
-			var tlocal_coords := local_coords and _edit.plane != TransformPlane.VIEW
+			var tlocal_coords := use_local_space and _edit.plane != TransformPlane.VIEW
 			
 			if snapping:
 				snap = translate_snap
@@ -1174,8 +1180,8 @@ func _update_transform(shift: bool) -> void:
 			else:
 				rplane = Plane(_get_camera_normal(), _edit.center)
 			
-			var local_axis := Vector3.ZERO
-			var global_axis := Vector3.ZERO
+			var local_axis : Vector3
+			var global_axis : Vector3
 			match _edit.plane:
 				TransformPlane.VIEW:
 					# local_axis unused
@@ -1220,16 +1226,17 @@ func _update_transform(shift: bool) -> void:
 			_message = TranslationServer.translate("Rotating") + ": {" + d + "} " + TranslationServer.translate("degrees")
 			angle = deg_to_rad(angle)
 			
-			var rlocal_coords = local_coords and _edit.plane != TransformPlane.VIEW # Disable local transformation for TRANSFORM_VIEW
+			var rlocal_coords = use_local_space and _edit.plane != TransformPlane.VIEW # Disable local transformation for TRANSFORM_VIEW
 			var compute_axis := global_axis
 			if rlocal_coords:
 				compute_axis = local_axis
 			_apply_transform(compute_axis, angle)
 
 func _apply_transform(motion: Vector3, snap: float) -> void:
-	var is_local_coords := local_coords and _edit.plane != TransformPlane.VIEW
+	var is_local_coords := use_local_space and _edit.plane != TransformPlane.VIEW
 	var new_transform := _compute_transform(_edit.mode, _edit.target_global, _edit.target_original, motion, snap, is_local_coords, _edit.plane != TransformPlane.VIEW)
 	_transform_gizmo_apply(target, new_transform, is_local_coords)
+	_update_transform_gizmo()
 
 func _compute_edit(point: Vector2) -> void:
 	_edit.target_global = target.global_transform
@@ -1237,6 +1244,7 @@ func _compute_edit(point: Vector2) -> void:
 	_edit.click_ray = _get_ray(point)
 	_edit.click_ray_pos = _get_ray_pos(point)
 	_edit.plane = TransformPlane.VIEW
+	_update_transform_gizmo()
 	_edit.center = transform.origin
 
 func _calculate_spatial_bounds(parent: Node3D, omit_top_level: bool = false, bounds_orientation: Transform3D = Transform3D.IDENTITY) -> AABB:

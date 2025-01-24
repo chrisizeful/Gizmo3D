@@ -166,10 +166,10 @@ public partial class Gizmo3D : Node3D
 
     [ExportGroup("Position")]
     /// <summary>
-    /// Whether the transformations are applied to the target in local or global space.
+    /// Whether the gizmo is displayed using the targets local coordinate space, or the global space.
     /// </summary>
     [Export]
-    public bool LocalCoords { get; set; }
+    public bool UseLocalSpace { get; set; }
     /// <summary>
     /// Value to snap rotations to, if enabled.
     /// </summary>
@@ -234,7 +234,7 @@ public partial class Gizmo3D : Node3D
         InitIndicators();
         SetColors();
         InitGizmoInstance();
-        UpdateTransformGizmoView();
+        UpdateTransformGizmo();
         VisibilityChanged += () => SetVisibility(Visible);
     }
 
@@ -253,16 +253,22 @@ public partial class Gizmo3D : Node3D
         {
             Editing = button.Pressed;
             if (!Editing)
+            {
+                UpdateTransformGizmo();
                 return;
+            }
             Edit.MousePos = button.Position;
             Editing = TransformGizmoSelect(button.Position);
         }
         else if (@event is InputEventMouseMotion motion)
         {
-            if (Editing && motion.ButtonMask.HasFlag(MouseButtonMask.Left))
+            if (Editing)
             {
-                Edit.MousePos = motion.Position;
-                UpdateTransform(false);
+                if (motion.ButtonMask.HasFlag(MouseButtonMask.Left))
+                {
+                    Edit.MousePos = motion.Position;
+                    UpdateTransform(false);
+                }
                 return;
             }
             Hovering = TransformGizmoSelect(motion.Position, true);
@@ -271,12 +277,9 @@ public partial class Gizmo3D : Node3D
 
     public override void _Process(double delta)
     {
-        if (Target == null || !IsInstanceValid(Target) || Target.IsQueuedForDeletion())
-            return;
-        Position = Target.Position;
-        UpdateTransformGizmoView();
+        if (Target != null && IsInstanceValid(Target) && !Target.IsQueuedForDeletion())
+            UpdateTransformGizmo();
     }
-
     public override void _ExitTree()
     {
         for (int i = 0; i < 3; i++)
@@ -731,7 +734,7 @@ void fragment() {
 
         Camera3D camera = GetViewport().GetCamera3D();
         Transform3D xform = Transform;
-        Transform3D cameraTransform = camera.GetCameraTransform();
+        Transform3D cameraTransform = camera.GlobalTransform;
 
         if (xform.Origin.IsEqualApprox(cameraTransform.Origin))
         {
@@ -763,7 +766,7 @@ void fragment() {
             Transform3D axisAngle = Transform3D.Identity;
             if (xform.Basis[i].Normalized().Dot(xform.Basis[(i + 1) % 3].Normalized()) < 1.0f)
                 axisAngle = axisAngle.LookingAt(xform.Basis[i].Normalized(), xform.Basis[(i + 1) % 3].Normalized());
-            axisAngle.Basis *= Basis.Scaled(scale);
+            axisAngle.Basis *= Basis.FromScale(scale);
             axisAngle.Origin = xform.Origin;
             InstanceSetTransform(MoveGizmoInstance[i], axisAngle);
             InstanceSetVisible(MoveGizmoInstance[i], (Mode & ToolMode.Move) == ToolMode.Move);
@@ -916,6 +919,15 @@ void fragment() {
             ScaleGizmo[i].SurfaceSetMaterial(0, (i + 9) == axis ? GizmoColorHl[i] : GizmoColor[i]);
             ScalePlaneGizmo[i].SurfaceSetMaterial(0, (i + 12) == axis ? PlaneGizmoColorHl[i] : PlaneGizmoColor[i]);
         }
+    }
+
+    void UpdateTransformGizmo()
+    {
+        if (UseLocalSpace)
+            GlobalTransform = Target.GlobalTransform;
+        else
+            GlobalTransform = new Transform3D(Basis.Identity, Target.GlobalTransform.Origin);
+        UpdateTransformGizmoView();
     }
 
     bool TransformGizmoSelect(Vector2 screenpos, bool highlightOnly = false)
@@ -1226,8 +1238,8 @@ void fragment() {
         switch (Edit.Mode)
         {
             case TransformMode.Scale:
-                Vector3 smotionMask = Vector3.Zero;
-                Plane splane = Plane.PlaneXY;
+                Vector3 smotionMask = default;
+                Plane splane = default;
                 bool splaneMv = false;
 
                 switch (Edit.Plane)
@@ -1294,7 +1306,7 @@ void fragment() {
                 smotion /= sclick.Value.DistanceTo(Edit.Center);
 
                 // Disable local transformation for TRANSFORM_VIEW
-                bool slocalCoords = LocalCoords && Edit.Plane != TransformPlane.View;
+                bool slocalCoords = UseLocalSpace && Edit.Plane != TransformPlane.View;
 
                 if (Snapping)
                     snap = ScaleSnap;
@@ -1308,8 +1320,8 @@ void fragment() {
                 break;
 
             case TransformMode.Translate:
-                Vector3 tmotionMask = Vector3.Zero;
-                Plane tplane = Plane.PlaneXY;
+                Vector3 tmotionMask = default;
+                Plane tplane = default;
                 bool tplaneMv = false;
 
                 switch (Edit.Plane)
@@ -1356,7 +1368,7 @@ void fragment() {
                     tmotion = tmotionMask.Dot(tmotion) * tmotionMask;
 
                 // Disable local transformation for TRANSFORM_VIEW
-                bool tlocalCoords = LocalCoords && Edit.Plane != TransformPlane.View;
+                bool tlocalCoords = UseLocalSpace && Edit.Plane != TransformPlane.View;
 
                 if (Snapping)
                     snap = TranslateSnap;
@@ -1385,8 +1397,8 @@ void fragment() {
                     rplane = new(GetCameraNormal(), Edit.Center);
                 }
 
-                Vector3 localAxis = Vector3.Zero;
-                Vector3 globalAxis = Vector3.Zero;
+                Vector3 localAxis = default;
+                Vector3 globalAxis = default;
                 switch (Edit.Plane)
                 {
                     case TransformPlane.View:
@@ -1420,10 +1432,10 @@ void fragment() {
                     break;
 
                 float orthogonalThreshold = Mathf.Cos(Mathf.DegToRad(85.0f));
-                bool AxisIsOrthogonal = Mathf.Abs(rplane.Normal.Dot(globalAxis)) < orthogonalThreshold;
+                bool axisIsOrthogonal = Mathf.Abs(rplane.Normal.Dot(globalAxis)) < orthogonalThreshold;
 
                 float angle;
-                if (AxisIsOrthogonal)
+                if (axisIsOrthogonal)
                 {
                     Vector3 projectionAxis = rplane.Normal.Cross(globalAxis);
                     Vector3 delta = rintersection.Value - rclick.Value;
@@ -1444,7 +1456,7 @@ void fragment() {
                 Message = TranslationServer.Translate("Rotating") + $": {angle:0.###} " + TranslationServer.Translate("degrees");
                 angle = Mathf.DegToRad(angle);
 
-                bool rlocalCoords = LocalCoords && Edit.Plane != TransformPlane.View; // Disable local transformation for TRANSFORM_VIEW
+                bool rlocalCoords = UseLocalSpace && Edit.Plane != TransformPlane.View; // Disable local transformation for TRANSFORM_VIEW
                 Vector3 computeAxis = rlocalCoords ? localAxis : globalAxis;
                 ApplyTransform(computeAxis, angle);
                 break;
@@ -1455,9 +1467,10 @@ void fragment() {
 
     void ApplyTransform(Vector3 motion, float snap)
     {
-        bool localCoords = LocalCoords && Edit.Plane != TransformPlane.View;
+        bool localCoords = UseLocalSpace && Edit.Plane != TransformPlane.View;
         Transform3D newTransform = ComputeTransform(Edit.Mode, Edit.TargetGlobal, Edit.TargetOriginal, motion, snap, localCoords, Edit.Plane != TransformPlane.View);
         TransformGizmoApply(Target, newTransform, localCoords);
+        UpdateTransformGizmo();
     }
 
     void ComputeEdit(Vector2 point)
@@ -1467,6 +1480,7 @@ void fragment() {
         Edit.ClickRay = GetRay(point);
         Edit.ClickRayPos = GetRayPos(point);
         Edit.Plane = TransformPlane.View;
+        UpdateTransformGizmo();
         Edit.Center = Transform.Origin;
     }
 
