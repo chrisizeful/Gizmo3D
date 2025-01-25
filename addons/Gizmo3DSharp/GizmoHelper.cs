@@ -2,7 +2,7 @@ using Godot;
 
 namespace Gizmo3DPlugin;
 
-public static class Helper
+public static class GizmoHelper
 {
 
     public static void SetOnTopOfAlpha(this BaseMaterial3D material, bool alpha = false)
