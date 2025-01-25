@@ -3,8 +3,11 @@ using Godot;
 
 namespace Gizmo3DPlugin;
 
+/// <summary>
+/// Plugin that add/removes the <see cref="Gizmo3D"/> node.
+/// </summary>
 [Tool]
-public partial class Loader : EditorPlugin
+public partial class GizmoLoader : EditorPlugin
 {
 
 	public override void _EnablePlugin()

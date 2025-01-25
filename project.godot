@@ -21,7 +21,7 @@ project/assembly_name="Gizmo3D"
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/Gizmo3DScript/plugin.cfg")
+enabled=PackedStringArray("res://addons/Gizmo3DScript/plugin.cfg", "res://addons/Gizmo3DSharp/plugin.cfg")
 
 [input]
 

@@ -1,6 +1,9 @@
 class_name GizmoHelper
 extends Node
+## A collection of helper methods translated from the C++ Godot source.
+## They're required by Gizmo3D but lack binds to GDScript and C#.
 
+## Port of https://github.com/godotengine/godot/blob/master/scene/resources/material.cpp#L2856
 static func set_on_top_of_alpha(material: BaseMaterial3D, alpha: bool = false):
 	if alpha:
 		material.transparency = BaseMaterial3D.Transparency.TRANSPARENCY_ALPHA
@@ -9,12 +12,13 @@ static func set_on_top_of_alpha(material: BaseMaterial3D, alpha: bool = false):
 	material.render_priority = Material.RENDER_PRIORITY_MAX
 	material.no_depth_test = true
 
-static func get_edge(aabb: AABB, p_edge: int) -> Array:
+## Port of https://github.com/godotengine/godot/blob/master/core/math/aabb.cpp#L361
+static func get_edge(aabb: AABB, edge: int) -> Array:
 	var result : Array[Vector3] = []
 	result.resize(2)
 	var position = aabb.position
 	var size = aabb.size
-	match (p_edge):
+	match (edge):
 		0:
 			result[0] = (Vector3(position.x + size.x, position.y, position.z))
 			result[1] = (Vector3(position.x, position.y, position.z))
@@ -53,6 +57,7 @@ static func get_edge(aabb: AABB, p_edge: int) -> Array:
 			result[1] = (Vector3(position.x + size.x, position.y + size.y, position.z + size.z))
 	return result
 
+## Port of https://github.com/godotengine/godot/blob/master/core/math/basis.cpp#L262
 static func scaled_orthogonal(basis: Basis, scale: Vector3) -> Basis:
 	var s = Vector3(-1, -1, -1) + scale
 	var sign = (s.x + s.y + s.z) < 0
