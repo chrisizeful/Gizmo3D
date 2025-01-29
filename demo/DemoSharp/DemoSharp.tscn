@@ -30,9 +30,8 @@ environment = SubResource("Environment_nlrnx")
 transform = Transform3D(0.838671, 0.221525, -0.497553, 0, 0.913545, 0.406737, 0.544639, -0.341118, 0.766164, -2.5, 1.5, 0)
 shadow_enabled = true
 
-[node name="Gizmo3D" type="Node3D" parent="." node_paths=PackedStringArray("Target")]
+[node name="Gizmo3D" type="Node3D" parent="."]
 script = ExtResource("2_wmj12")
-Target = NodePath("../Objects/coin")
 
 [node name="Selector" type="Node3D" parent="."]
 
@@ -49,7 +48,6 @@ mesh = SubResource("PlaneMesh_5ilx2")
 skeleton = NodePath("../..")
 
 [node name="coin" parent="Objects" instance=ExtResource("3_an4dy")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
 
 [node name="barrel" parent="Objects" instance=ExtResource("4_2y4ol")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0, -1)
@@ -101,7 +99,11 @@ text = "Look: RMB"
 
 [node name="Select" type="Label" parent="UI/Controls/PanelContainer/MarginContainer/VBoxContainer"]
 layout_mode = 2
-text = "Select: LMB"
+text = "De/select: LMB"
+
+[node name="AddTarget" type="Label" parent="UI/Controls/PanelContainer/MarginContainer/VBoxContainer"]
+layout_mode = 2
+text = "Add Target: Shift + LMB"
 
 [node name="Gizmo" type="Label" parent="UI/Controls/PanelContainer/MarginContainer/VBoxContainer"]
 layout_mode = 2

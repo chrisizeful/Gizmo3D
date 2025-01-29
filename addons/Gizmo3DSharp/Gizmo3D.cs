@@ -1,5 +1,6 @@
 using System;
 using Godot;
+using System.Collections.Generic;
 using static Godot.RenderingServer;
 
 namespace Gizmo3DPlugin;
@@ -52,18 +53,20 @@ public partial class Gizmo3D : Node3D
                 InstanceSetLayerMask(AxisGizmoInstance[i], Layers);
             }
             InstanceSetLayerMask(RotateGizmoInstance[3], Layers);
-            InstanceSetLayerMask(SboxInstance, Layers);
-            InstanceSetLayerMask(SboxInstanceOffset, Layers);
-            InstanceSetLayerMask(SboxXrayInstance, Layers);
-            InstanceSetLayerMask(SboxXrayInstanceOffset, Layers);
+            foreach (var item in Selections)
+            {
+                InstanceSetLayerMask(item.Value.SboxInstance, Layers);
+                InstanceSetLayerMask(item.Value.SboxInstanceOffset, Layers);
+                InstanceSetLayerMask(item.Value.SboxXrayInstance, Layers);
+                InstanceSetLayerMask(item.Value.SboxXrayInstanceOffset, Layers);
+            }
         }
     }
 
     /// <summary>
-    /// The node this gizmo will apply transformations to.
+    /// The nodes this gizmo will apply transformations to.
     /// </summary>
-    [Export]
-    public Node3D Target { get; set; }
+    Dictionary<Node3D, SelectedItem> Selections = new();
     /// <summary>
     /// Whether or not transformations will be snapped to RotateSnap, ScaleSnap, and/or TranslateSnap.
     /// </summary>
@@ -73,10 +76,10 @@ public partial class Gizmo3D : Node3D
     /// </summary>
     public string Message { get; private set; }
 
+    bool editing;
     /// <summary>
     /// If the user is currently interacting with is gizmo.
     /// </summary>
-    bool editing;
     public bool Editing
     {
         get => editing;
@@ -103,7 +106,7 @@ public partial class Gizmo3D : Node3D
     [Export]
     public bool ShowAxes { get; set; } = true;
     /// <summary>
-    /// If the box encapsulating the target node is drawn.
+    /// If the box encapsulating the target nodes is drawn.
     /// </summary>
     [Export]
     public bool ShowSelectionBox { get; set; } = true;
@@ -147,7 +150,7 @@ public partial class Gizmo3D : Node3D
 
     Color selectionBoxColor = new(1.0f, 0.5f, 0);
     /// <summary>
-    /// The color of the AABB surrounding the target node.
+    /// The color of the AABB surrounding the target nodes.
     /// </summary>
     [Export(PropertyHint.ColorNoAlpha)]
     public Color SelectionBoxColor
@@ -208,8 +211,6 @@ public partial class Gizmo3D : Node3D
 
     ArrayMesh SelectionBox, SelectionBoxXray;
     StandardMaterial3D SelectionBoxMat, SelectionBoxXrayMat;
-    Rid SboxInstance, SboxInstanceOffset;
-    Rid SboxXrayInstance, SboxXrayInstanceOffset;
 
     EditData Edit = new();
     float GizmoScale = 1.0f;
@@ -221,12 +222,19 @@ public partial class Gizmo3D : Node3D
 
     struct EditData
     {
-        public Transform3D TargetOriginal, TargetGlobal;
+        public Transform3D Original;
         public TransformMode Mode;
         public TransformPlane Plane;
         public Vector3 ClickRay, ClickRayPos;
         public Vector3 Center;
         public Vector2 MousePos;
+    }
+
+    struct SelectedItem
+    {
+        public Transform3D TargetOriginal, TargetGlobal;
+        public Rid SboxInstance, SboxInstanceOffset;
+        public Rid SboxXrayInstance, SboxXrayInstanceOffset;
     };
 
     public override void _Ready()
@@ -275,11 +283,68 @@ public partial class Gizmo3D : Node3D
         }
     }
 
+#region Selection
+
+    /// <summary>
+    /// Add a node to the list of nodes currently being edited.
+    /// </summary>
+    /// <param name="target">The node to add.</param>
+    public void Select(Node3D target)
+    {
+        Selections[target] = GetEditorData();
+    }
+
+    /// <summary>
+    /// Remove a node from the list of nodes currently being edited.
+    /// </summary>
+    /// <param name="target">The node to remove.</param>
+    public bool Deselect(Node3D target)
+    {
+        if (!Selections.TryGetValue(target, out var item))
+            return false;
+        Selections.Remove(target);
+        FreeRid(item.SboxInstance);
+        FreeRid(item.SboxInstanceOffset);
+        FreeRid(item.SboxXrayInstance);
+        FreeRid(item.SboxXrayInstanceOffset);
+        return true;
+    }
+
+    /// <summary>
+    /// Check if a node is currently selected.
+    /// </summary>
+    /// <param name="target">The node in question.</param>
+    /// <returns>If the node is being edited.</returns>
+    public bool IsSelected(Node3D target)
+    {
+        return Selections.ContainsKey(target);
+    }
+
+    /// <summary>
+    /// Remove all nodes from the list of nodes currently being edited.
+    /// </summary>
+    public void ClearSelection()
+    {
+        foreach (var item in Selections)
+            Deselect(item.Key);
+    }
+
+    /// <summary>
+    /// Get the number of nodes currently being edited.
+    /// </summary>
+    /// <returns></returns>
+    public int GetSelectedCount()
+    {
+        return Selections.Count;
+    }
+
+#endregion
+
     public override void _Process(double delta)
     {
-        if (Target != null && IsInstanceValid(Target) && !Target.IsQueuedForDeletion())
-            UpdateTransformGizmo();
+        UpdateTransformGizmo();
     }
+
     public override void _ExitTree()
     {
         for (int i = 0; i < 3; i++)
@@ -293,11 +358,7 @@ public partial class Gizmo3D : Node3D
         }
         // Rotation white outline
         FreeRid(RotateGizmoInstance[3]);
-
-        FreeRid(SboxInstance);
-        FreeRid(SboxInstanceOffset);
-        FreeRid(SboxXrayInstance);
-        FreeRid(SboxXrayInstanceOffset);
+        ClearSelection();
     }
 
     void InitGizmoInstance()
@@ -793,34 +854,29 @@ void fragment() {
         InstanceSetVisible(RotateGizmoInstance[3], (Mode & ToolMode.Rotate) == ToolMode.Rotate);
 
         // Selection box
-        Transform3D t = Transform3D.Identity;
-        Transform3D tOffset = Transform3D.Identity;
-        if (Target != null)
+        foreach (var item in Selections)
         {
-            t = Target.GlobalTransform;
-            tOffset = Target.GlobalTransform;
-            Aabb bounds = CalculateSpatialBounds(Target);
+            Aabb bounds = CalculateSpatialBounds(item.Key);
 
             Vector3 offset = new(0.005f, 0.005f, 0.005f);
             Basis aabbS = Basis.FromScale(bounds.Size + offset);
-            t = t.TranslatedLocal(bounds.Position - offset / 2);
+            Transform3D t = item.Key.GlobalTransform.TranslatedLocal(bounds.Position - offset / 2);
             t.Basis *= aabbS;
 
             offset = new(0.01f, 0.01f, 0.01f);
             aabbS = Basis.FromScale(bounds.Size + offset);
-            tOffset = tOffset.TranslatedLocal(bounds.Position - offset / 2);
+            Transform3D tOffset = item.Key.GlobalTransform.TranslatedLocal(bounds.Position - offset / 2);
             tOffset.Basis *= aabbS;
-        }
 
-        bool showSelection = ShowSelectionBox && Target != null;
-        InstanceSetTransform(SboxInstance, t);
-        InstanceSetVisible(SboxInstance, showSelection);
-        InstanceSetTransform(SboxInstanceOffset, tOffset);
-        InstanceSetVisible(SboxInstanceOffset, showSelection);
-        InstanceSetTransform(SboxXrayInstance, t);
-        InstanceSetVisible(SboxXrayInstance, showSelection);
-        InstanceSetTransform(SboxXrayInstanceOffset, tOffset);
-        InstanceSetVisible(SboxXrayInstanceOffset, showSelection);
+            InstanceSetTransform(item.Value.SboxInstance, t);
+            InstanceSetVisible(item.Value.SboxInstance, ShowSelectionBox);
+            InstanceSetTransform(item.Value.SboxInstanceOffset, tOffset);
+            InstanceSetVisible(item.Value.SboxInstanceOffset, ShowSelectionBox);
+            InstanceSetTransform(item.Value.SboxXrayInstance, t);
+            InstanceSetVisible(item.Value.SboxXrayInstance, ShowSelectionBox);
+            InstanceSetTransform(item.Value.SboxXrayInstanceOffset, tOffset);
+            InstanceSetVisible(item.Value.SboxXrayInstanceOffset, ShowSelectionBox);
+        }
     }
 
     void SetVisibility(bool visible)
@@ -836,16 +892,17 @@ void fragment() {
         }
         // Rotation white outline
         InstanceSetVisible(RotateGizmoInstance[3], visible);
-
-        InstanceSetVisible(SboxInstance, visible);
-        InstanceSetVisible(SboxInstanceOffset, visible);
-        InstanceSetVisible(SboxXrayInstance, visible);
-        InstanceSetVisible(SboxXrayInstanceOffset, visible);
+        foreach (var item in Selections)
+        {
+            InstanceSetVisible(item.Value.SboxInstance, visible);
+            InstanceSetVisible(item.Value.SboxInstanceOffset, visible);
+            InstanceSetVisible(item.Value.SboxXrayInstance, visible);
+            InstanceSetVisible(item.Value.SboxXrayInstanceOffset, visible);
+        }
     }
 
     void GenerateSelectionBoxes()
     {
-#region Meshes
         // Use two AABBs to create the illusion of a slightly thicker line.
         Aabb aabb = new(new(), Vector3.One);
 
@@ -884,29 +941,6 @@ void fragment() {
             Transparency = BaseMaterial3D.TransparencyEnum.Alpha
         });
         SelectionBoxXray = stXray.Commit();
-#endregion
-#region Instances
-        SboxInstance = InstanceCreate2(SelectionBox.GetRid(), GetWorld3D().Scenario);
-        SboxInstanceOffset = InstanceCreate2(SelectionBox.GetRid(), GetWorld3D().Scenario);
-        InstanceGeometrySetCastShadowsSetting(SboxInstance, ShadowCastingSetting.Off);
-        InstanceGeometrySetCastShadowsSetting(SboxInstanceOffset, ShadowCastingSetting.Off);
-        InstanceSetLayerMask(SboxInstance, Layers);
-        InstanceSetLayerMask(SboxInstanceOffset, Layers);
-        InstanceGeometrySetFlag(SboxInstance, InstanceFlags.IgnoreOcclusionCulling, true);
-        InstanceGeometrySetFlag(SboxInstance, InstanceFlags.UseBakedLight, false);
-        InstanceGeometrySetFlag(SboxInstanceOffset, InstanceFlags.IgnoreOcclusionCulling, true);
-        InstanceGeometrySetFlag(SboxInstanceOffset, InstanceFlags.UseBakedLight, false);
-        SboxXrayInstance = InstanceCreate2(SelectionBoxXray.GetRid(), GetWorld3D().Scenario);
-        SboxXrayInstanceOffset = InstanceCreate2(SelectionBoxXray.GetRid(), GetWorld3D().Scenario);
-        InstanceGeometrySetCastShadowsSetting(SboxXrayInstance, ShadowCastingSetting.Off);
-        InstanceGeometrySetCastShadowsSetting(SboxXrayInstanceOffset, ShadowCastingSetting.Off);
-        InstanceSetLayerMask(SboxXrayInstance, Layers);
-        InstanceSetLayerMask(SboxXrayInstanceOffset, Layers);
-        InstanceGeometrySetFlag(SboxXrayInstance, InstanceFlags.IgnoreOcclusionCulling, true);
-        InstanceGeometrySetFlag(SboxXrayInstance, InstanceFlags.UseBakedLight, false);
-        InstanceGeometrySetFlag(SboxXrayInstanceOffset, InstanceFlags.IgnoreOcclusionCulling, true);
-        InstanceGeometrySetFlag(SboxXrayInstanceOffset, InstanceFlags.UseBakedLight, false);
-#endregion
     }
 
     void SelectGizmoHighlightAxis(int axis)
@@ -923,11 +957,53 @@ void fragment() {
 
     void UpdateTransformGizmo()
     {
-        if (UseLocalSpace)
-            GlobalTransform = Target.GlobalTransform;
-        else
-            GlobalTransform = new Transform3D(Basis.Identity, Target.GlobalTransform.Origin);
+        int count = 0;
+        Vector3 gizmoCenter = default;
+        Basis gizmoBasis = Basis.Identity;
+
+        foreach (var item in Selections)
+        {
+            Transform3D xf = item.Key.GlobalTransform;
+            gizmoCenter += xf.Origin;
+            if (count == 0 && UseLocalSpace)
+                gizmoBasis = xf.Basis;
+            count++;
+        }
+
+        Visible = count > 0;
+        Transform = new()
+        {
+            Origin = (count > 0) ? gizmoCenter / count : default,
+            Basis = (count == 1) ? gizmoBasis : Basis.Identity
+        };
+
         UpdateTransformGizmoView();
+    }
+
+    SelectedItem GetEditorData()
+    {
+        SelectedItem item = new();
+        item.SboxInstance = InstanceCreate2(SelectionBox.GetRid(), GetWorld3D().Scenario);
+        item.SboxInstanceOffset = InstanceCreate2(SelectionBox.GetRid(), GetWorld3D().Scenario);
+        InstanceGeometrySetCastShadowsSetting(item.SboxInstance, ShadowCastingSetting.Off);
+        InstanceGeometrySetCastShadowsSetting(item.SboxInstanceOffset, ShadowCastingSetting.Off);
+        InstanceSetLayerMask(item.SboxInstance, Layers);
+        InstanceSetLayerMask(item.SboxInstanceOffset, Layers);
+        InstanceGeometrySetFlag(item.SboxInstance, InstanceFlags.IgnoreOcclusionCulling, true);
+        InstanceGeometrySetFlag(item.SboxInstance, InstanceFlags.UseBakedLight, false);
+        InstanceGeometrySetFlag(item.SboxInstanceOffset, InstanceFlags.IgnoreOcclusionCulling, true);
+        InstanceGeometrySetFlag(item.SboxInstanceOffset, InstanceFlags.UseBakedLight, false);
+        item.SboxXrayInstance = InstanceCreate2(SelectionBoxXray.GetRid(), GetWorld3D().Scenario);
+        item.SboxXrayInstanceOffset = InstanceCreate2(SelectionBoxXray.GetRid(), GetWorld3D().Scenario);
+        InstanceGeometrySetCastShadowsSetting(item.SboxXrayInstance, ShadowCastingSetting.Off);
+        InstanceGeometrySetCastShadowsSetting(item.SboxXrayInstanceOffset, ShadowCastingSetting.Off);
+        InstanceSetLayerMask(item.SboxXrayInstance, Layers);
+        InstanceSetLayerMask(item.SboxXrayInstanceOffset, Layers);
+        InstanceGeometrySetFlag(item.SboxXrayInstance, InstanceFlags.IgnoreOcclusionCulling, true);
+        InstanceGeometrySetFlag(item.SboxXrayInstance, InstanceFlags.UseBakedLight, false);
+        InstanceGeometrySetFlag(item.SboxXrayInstanceOffset, InstanceFlags.IgnoreOcclusionCulling, true);
+        InstanceGeometrySetFlag(item.SboxXrayInstanceOffset, InstanceFlags.UseBakedLight, false);
+        return item;
     }
 
     bool TransformGizmoSelect(Vector2 screenpos, bool highlightOnly = false)
@@ -935,7 +1011,7 @@ void fragment() {
         if (!Visible)
             return false;
 
-        if (Target == null)
+        if (Selections.Count == 0)
         {
             if (highlightOnly)
                 SelectGizmoHighlightAxis(-1);
@@ -1314,7 +1390,7 @@ void fragment() {
                 Vector3 smotionSnapped = smotion.Snapped(snap);
                 Message = TranslationServer.Translate("Scaling") + $": ({smotionSnapped.X:0.###}, {smotionSnapped.Y:0.###}, {smotionSnapped.Z:0.###})";
                 if (slocalCoords)
-                    smotion = Edit.TargetOriginal.Basis.Inverse() * smotion;
+                    smotion = Edit.Original.Basis.Inverse() * smotion;
 
                 ApplyTransform(smotion, snap);
                 break;
@@ -1468,20 +1544,29 @@ void fragment() {
     void ApplyTransform(Vector3 motion, float snap)
     {
         bool localCoords = UseLocalSpace && Edit.Plane != TransformPlane.View;
-        Transform3D newTransform = ComputeTransform(Edit.Mode, Edit.TargetGlobal, Edit.TargetOriginal, motion, snap, localCoords, Edit.Plane != TransformPlane.View);
-        TransformGizmoApply(Target, newTransform, localCoords);
-        UpdateTransformGizmo();
+        foreach (var item in Selections)
+        {
+            Transform3D newTransform = ComputeTransform(Edit.Mode, item.Value.TargetGlobal, item.Value.TargetOriginal, motion, snap, localCoords, Edit.Plane != TransformPlane.View);
+            TransformGizmoApply(item.Key, newTransform, localCoords);
+            UpdateTransformGizmo();
+        }
     }
 
     void ComputeEdit(Vector2 point)
     {
-        Edit.TargetGlobal = Target.GlobalTransform;
-        Edit.TargetOriginal = Target.Transform;
         Edit.ClickRay = GetRay(point);
         Edit.ClickRayPos = GetRayPos(point);
         Edit.Plane = TransformPlane.View;
         UpdateTransformGizmo();
         Edit.Center = Transform.Origin;
+        Edit.Original = Transform;
+        foreach (var key in Selections.Keys)
+        {
+            SelectedItem item = Selections[key];
+            item.TargetGlobal = key.GlobalTransform;
+            item.TargetOriginal = key.Transform;
+            Selections[key] = item;
+        }
     }
 
     Aabb CalculateSpatialBounds(Node3D parent, bool omitTopLevel = false, Transform3D boundsOrientation = default)

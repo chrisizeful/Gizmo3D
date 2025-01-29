@@ -1,8 +1,7 @@
 class_name EditData
 extends Object
 
-var target_original : Transform3D
-var target_global : Transform3D
+var original : Transform3D
 var mode : Gizmo3D.TransformMode
 var plane : Gizmo3D.TransformPlane
 var click_ray : Vector3

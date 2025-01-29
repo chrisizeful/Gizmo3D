@@ -39,14 +39,15 @@ var layers: int:
 			RenderingServer.instance_set_layer_mask(_scale_plane_gizmo_instance[i], _layers)
 			RenderingServer.instance_set_layer_mask(_axis_gizmo_instance[i], _layers)
 		RenderingServer.instance_set_layer_mask(_rotate_gizmo_instance[3], _layers)
-		RenderingServer.instance_set_layer_mask(_sbox_instance, _layers)
-		RenderingServer.instance_set_layer_mask(_sbox_instance_offset, _layers)
-		RenderingServer.instance_set_layer_mask(_sbox_xray_instance, _layers)
-		RenderingServer.instance_set_layer_mask(_sbox_xray_instance_offset, _layers)
+		for key in _selections:
+			var item = _selections[key]
+			RenderingServer.instance_set_layer_mask(item.sbox_instance, _layers)
+			RenderingServer.instance_set_layer_mask(item.sbox_instance_offset, _layers)
+			RenderingServer.instance_set_layer_mask(item.sbox_xray_instance, _layers)
+			RenderingServer.instance_set_layer_mask(item.sbox_xray_instance_offset, _layers)
 
-## The node this gizmo will apply transformations to.
-@export
-var target : Node3D
+## The nodes this gizmo will apply transformations to.
+var _selections : Dictionary
 var _snapping : bool
 ## Whether or not transformations will be snapped to [member rotate_snap], [member scale_snap], and/or [member translate_snap].
 var snapping: bool:
@@ -81,7 +82,7 @@ var size := 80.0
 ## If the X/Y/Z axes extending to infinity are drawn.
 @export
 var show_axes := true
-## If the box encapsulating the target node is drawn.
+## If the box encapsulating the target nodes is drawn.
 @export
 var show_selection_box := true
 
@@ -113,10 +114,10 @@ var colors: Array[Color]:
 			_set_colors()
 		_colors = value
 
-## The color of the AABB surrounding the target node.
+## The color of the AABB surrounding the target nodes.
 @export
 var _selection_box_color := Color(1.0, .5, 0)
-## The color of the AABB surrounding the target node.
+## The color of the AABB surrounding the target nodes.
 var selection_box_color: Color:
 	get:
 		return _selection_box_color
@@ -164,10 +165,6 @@ var _selection_box : ArrayMesh
 var _selection_box_xray : ArrayMesh
 var _selection_box_mat : StandardMaterial3D
 var _selection_box_xray_mat : StandardMaterial3D
-var _sbox_instance : RID
-var _sbox_instance_offset : RID
-var _sbox_xray_instance : RID
-var _sbox_xray_instance_offset : RID
 
 var _edit := EditData.new()
 var _gizmo_scale := 1.0
@@ -228,9 +225,42 @@ func _unhandled_input(event: InputEvent) -> void:
 			return
 		_hovering = _transform_gizmo_select(event.position, true)
 
+#region Selection
+
+## Add a node to the list of nodes currently being edited.
+func select(target : Node3D) -> void:
+	_selections[target] = _get_editor_data()
+
+## Remove a node from the list of nodes currently being edited.
+func deselect(target : Node3D) -> bool:
+	var item = _selections.get(target)
+	if item == null:
+		return false
+	_selections.erase(target)
+	RenderingServer.free_rid(item.sbox_instance)
+	RenderingServer.free_rid(item.sbox_instance_offset)
+	RenderingServer.free_rid(item.sbox_xray_instance)
+	RenderingServer.free_rid(item.sbox_xray_instance_offset)
+	return true
+
+## Check if a node is currently selected.
+func is_selected(target : Node3D) -> bool:
+	return _selections.find_key(target) != null
+
+## Remove all nodes from the list of nodes currently being edited.
+func clear_selection() -> void:
+	for key in _selections:
+		deselect(key)
+
+## Get the number of nodes currently being edited.
+func get_selected_count() -> int:
+	return _selections.size()
+
+#endregion
+
 func _process(delta: float) -> void:
-	if target != null && is_instance_valid(target) && !target.is_queued_for_deletion():
-		_update_transform_gizmo()
+	_update_transform_gizmo()
+
 func _exit_tree() -> void:
 	for i in range(3):
 		RenderingServer.free_rid(_move_gizmo_instance[i])
@@ -240,11 +270,7 @@ func _exit_tree() -> void:
 		RenderingServer.free_rid(_scale_plane_gizmo_instance[i])
 		RenderingServer.free_rid(_axis_gizmo_instance[i])
 	RenderingServer.free_rid(_rotate_gizmo_instance[3])
-	
-	RenderingServer.free_rid(_sbox_instance)
-	RenderingServer.free_rid(_sbox_instance_offset)
-	RenderingServer.free_rid(_sbox_xray_instance)
-	RenderingServer.free_rid(_sbox_xray_instance_offset)
+	clear_selection()
 
 func _init_gizmo_instance() -> void:
 	for i in range(3):
@@ -684,32 +710,28 @@ func _update_transform_gizmo_view() -> void:
 	RenderingServer.instance_set_visible(_rotate_gizmo_instance[3], mode & ToolMode.ROTATE)
 	
 	# Selection box
-	var t : Transform3D
-	var t_offset : Transform3D
-	if target != null:
-		t = target.global_transform
-		t_offset = target.global_transform
-		var bounds := _calculate_spatial_bounds(target)
+	for key in _selections:
+		var bounds := _calculate_spatial_bounds(key)
 		
 		var offset := Vector3(0.005, 0.005, 0.005)
 		var aabb_s := Basis.from_scale(bounds.size + offset)
-		t = t.translated_local(bounds.position - offset / 2)
+		var t = key.global_transform.translated_local(bounds.position - offset / 2)
 		t.basis *= aabb_s
 		
 		offset = Vector3(0.01, 0.01, 0.01)
 		aabb_s = Basis.from_scale(bounds.size + offset)
-		t_offset = t_offset.translated_local(bounds.position - offset / 2)
+		var t_offset = key.global_transform.translated_local(bounds.position - offset / 2)
 		t_offset.basis *= aabb_s
 	
-	var show_selection := show_selection_box and target != null
-	RenderingServer.instance_set_transform(_sbox_instance, t)
-	RenderingServer.instance_set_visible(_sbox_instance, show_selection)
-	RenderingServer.instance_set_transform(_sbox_instance_offset, t_offset)
-	RenderingServer.instance_set_visible(_sbox_instance_offset, show_selection)
-	RenderingServer.instance_set_transform(_sbox_xray_instance, t)
-	RenderingServer.instance_set_visible(_sbox_xray_instance, show_selection)
-	RenderingServer.instance_set_transform(_sbox_xray_instance_offset, t_offset)
-	RenderingServer.instance_set_visible(_sbox_xray_instance_offset, show_selection)
+		var item = _selections[key]
+		RenderingServer.instance_set_transform(item.sbox_instance, t)
+		RenderingServer.instance_set_visible(item.sbox_instance, show_selection_box)
+		RenderingServer.instance_set_transform(item.sbox_instance_offset, t_offset)
+		RenderingServer.instance_set_visible(item.sbox_instance_offset, show_selection_box)
+		RenderingServer.instance_set_transform(item.sbox_xray_instance, t)
+		RenderingServer.instance_set_visible(item.sbox_xray_instance, show_selection_box)
+		RenderingServer.instance_set_transform(item.sbox_xray_instance_offset, t_offset)
+		RenderingServer.instance_set_visible(item.sbox_xray_instance_offset, show_selection_box)
 
 func _set_visibility(visible : bool) -> void:
 	for i in range(3):
@@ -720,14 +742,14 @@ func _set_visibility(visible : bool) -> void:
 		RenderingServer.instance_set_visible(_scale_plane_gizmo_instance[i], visible)
 		RenderingServer.instance_set_visible(_axis_gizmo_instance[i], visible)
 	RenderingServer.instance_set_visible(_rotate_gizmo_instance[3], visible)
-	
-	RenderingServer.instance_set_visible(_sbox_instance, visible)
-	RenderingServer.instance_set_visible(_sbox_instance_offset, visible)
-	RenderingServer.instance_set_visible(_sbox_xray_instance, visible)
-	RenderingServer.instance_set_visible(_sbox_xray_instance_offset, visible)
+	for key in _selections:
+		var item = _selections[key]
+		RenderingServer.instance_set_visible(item.sbox_instance, visible)
+		RenderingServer.instance_set_visible(item.sbox_instance_offset, visible)
+		RenderingServer.instance_set_visible(item.sbox_xray_instance, visible)
+		RenderingServer.instance_set_visible(item.sbox_xray_instance_offset, visible)
 
 func _generate_selection_boxes():
-	# Meshes
 	# Use two AABBs to create the illusion of a slightly thicker line.
 	var aabb := AABB(Vector3(), Vector3.ONE)
 	
@@ -762,28 +784,6 @@ func _generate_selection_boxes():
 	_selection_box_xray_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	st_xray.set_material(_selection_box_xray_mat)
 	_selection_box_xray = st.commit()
-	
-	# Instances
-	_sbox_instance = RenderingServer.instance_create2(_selection_box.get_rid(), get_world_3d().scenario)
-	_sbox_instance_offset = RenderingServer.instance_create2(_selection_box.get_rid(), get_world_3d().scenario)
-	RenderingServer.instance_geometry_set_cast_shadows_setting(_sbox_instance, RenderingServer.SHADOW_CASTING_SETTING_OFF)
-	RenderingServer.instance_geometry_set_cast_shadows_setting(_sbox_instance_offset, RenderingServer.SHADOW_CASTING_SETTING_OFF)
-	RenderingServer.instance_set_layer_mask(_sbox_instance, layers)
-	RenderingServer.instance_set_layer_mask(_sbox_instance_offset, layers)
-	RenderingServer.instance_geometry_set_flag(_sbox_instance, RenderingServer.INSTANCE_FLAG_IGNORE_OCCLUSION_CULLING, true)
-	RenderingServer.instance_geometry_set_flag(_sbox_instance, RenderingServer.INSTANCE_FLAG_USE_BAKED_LIGHT, false)
-	RenderingServer.instance_geometry_set_flag(_sbox_instance_offset, RenderingServer.INSTANCE_FLAG_IGNORE_OCCLUSION_CULLING, true)
-	RenderingServer.instance_geometry_set_flag(_sbox_instance_offset, RenderingServer.INSTANCE_FLAG_USE_BAKED_LIGHT, false)
-	_sbox_xray_instance = RenderingServer.instance_create2(_selection_box.get_rid(), get_world_3d().scenario)
-	_sbox_xray_instance_offset = RenderingServer.instance_create2(_selection_box.get_rid(), get_world_3d().scenario)
-	RenderingServer.instance_geometry_set_cast_shadows_setting(_sbox_xray_instance, RenderingServer.SHADOW_CASTING_SETTING_OFF)
-	RenderingServer.instance_geometry_set_cast_shadows_setting(_sbox_xray_instance_offset, RenderingServer.SHADOW_CASTING_SETTING_OFF)
-	RenderingServer.instance_set_layer_mask(_sbox_xray_instance, layers)
-	RenderingServer.instance_set_layer_mask(_sbox_xray_instance_offset, layers)
-	RenderingServer.instance_geometry_set_flag(_sbox_xray_instance, RenderingServer.INSTANCE_FLAG_IGNORE_OCCLUSION_CULLING, true)
-	RenderingServer.instance_geometry_set_flag(_sbox_xray_instance, RenderingServer.INSTANCE_FLAG_USE_BAKED_LIGHT, false)
-	RenderingServer.instance_geometry_set_flag(_sbox_xray_instance_offset, RenderingServer.INSTANCE_FLAG_IGNORE_OCCLUSION_CULLING, true)
-	RenderingServer.instance_geometry_set_flag(_sbox_xray_instance_offset, RenderingServer.INSTANCE_FLAG_USE_BAKED_LIGHT, false)
 
 func _select_gizmo_highlight_axis(axis: int) -> void:
 	for i in range(3):
@@ -809,17 +809,53 @@ func _select_gizmo_highlight_axis(axis: int) -> void:
 			_scale_plane_gizmo[i].surface_set_material(0, _plane_gizmo_color[i])
 
 func _update_transform_gizmo():
-	if use_local_space:
-		global_transform = target.global_transform;
-	else:
-		global_transform = Transform3D(Basis.IDENTITY, target.global_transform.origin)
+	var count := 0
+	var gizmo_center : Vector3
+	var gizmo_basis : Basis
+	
+	for key in _selections:
+		var item = _selections[key]
+		var xf = key.global_transform
+		gizmo_center += xf.origin
+		if count == 0 and use_local_space:
+			gizmo_basis = xf.basis
+		count += 1
+	
+	visible = count > 0
+	transform.origin = (gizmo_center / count) if count > 0 else Vector3()
+	transform.basis = gizmo_basis if count == 1 else Basis()
+	
 	_update_transform_gizmo_view()
+
+func _get_editor_data() -> SelectedItem:
+	var item = SelectedItem.new()
+	item.sbox_instance = RenderingServer.instance_create2(_selection_box.get_rid(), get_world_3d().scenario)
+	item.sbox_instance_offset = RenderingServer.instance_create2(_selection_box.get_rid(), get_world_3d().scenario)
+	RenderingServer.instance_geometry_set_cast_shadows_setting(item.sbox_instance, RenderingServer.SHADOW_CASTING_SETTING_OFF)
+	RenderingServer.instance_geometry_set_cast_shadows_setting(item.sbox_instance_offset, RenderingServer.SHADOW_CASTING_SETTING_OFF)
+	RenderingServer.instance_set_layer_mask(item.sbox_instance, layers)
+	RenderingServer.instance_set_layer_mask(item.sbox_instance_offset, layers)
+	RenderingServer.instance_geometry_set_flag(item.sbox_instance, RenderingServer.INSTANCE_FLAG_IGNORE_OCCLUSION_CULLING, true)
+	RenderingServer.instance_geometry_set_flag(item.sbox_instance, RenderingServer.INSTANCE_FLAG_USE_BAKED_LIGHT, false)
+	RenderingServer.instance_geometry_set_flag(item.sbox_instance_offset, RenderingServer.INSTANCE_FLAG_IGNORE_OCCLUSION_CULLING, true)
+	RenderingServer.instance_geometry_set_flag(item.sbox_instance_offset, RenderingServer.INSTANCE_FLAG_USE_BAKED_LIGHT, false)
+	item.sbox_xray_instance = RenderingServer.instance_create2(_selection_box.get_rid(), get_world_3d().scenario)
+	item.sbox_xray_instance_offset = RenderingServer.instance_create2(_selection_box.get_rid(), get_world_3d().scenario)
+	RenderingServer.instance_geometry_set_cast_shadows_setting(item.sbox_xray_instance, RenderingServer.SHADOW_CASTING_SETTING_OFF)
+	RenderingServer.instance_geometry_set_cast_shadows_setting(item.sbox_xray_instance_offset, RenderingServer.SHADOW_CASTING_SETTING_OFF)
+	RenderingServer.instance_set_layer_mask(item.sbox_xray_instance, layers)
+	RenderingServer.instance_set_layer_mask(item.sbox_xray_instance_offset, layers)
+	RenderingServer.instance_geometry_set_flag(item.sbox_xray_instance, RenderingServer.INSTANCE_FLAG_IGNORE_OCCLUSION_CULLING, true)
+	RenderingServer.instance_geometry_set_flag(item.sbox_xray_instance, RenderingServer.INSTANCE_FLAG_USE_BAKED_LIGHT, false)
+	RenderingServer.instance_geometry_set_flag(item.sbox_xray_instance_offset, RenderingServer.INSTANCE_FLAG_IGNORE_OCCLUSION_CULLING, true)
+	RenderingServer.instance_geometry_set_flag(item.sbox_xray_instance_offset, RenderingServer.INSTANCE_FLAG_USE_BAKED_LIGHT, false)
+	return item
 
 func _transform_gizmo_select(screen_pos: Vector2, highlight_only: bool = false):
 	if !visible:
 		return false
 	
-	if target == null:
+	if _selections.size() == 0:
 		if highlight_only:
 			_select_gizmo_highlight_axis(-1)
 		return false
@@ -1111,7 +1147,7 @@ func _update_transform(shift: bool) -> void:
 			var z := "%.3f" % smotion_snapped.z
 			_message = TranslationServer.translate("Scaling") + ": (" + x + ", " + y + ", " + z + ")"
 			if slocal_coords:
-				smotion = _edit.target_original.basis.inverse() * smotion
+				smotion = _edit.original.basis.inverse() * smotion
 			
 			_apply_transform(smotion, snap)
 		TransformMode.TRANSLATE:
@@ -1234,18 +1270,24 @@ func _update_transform(shift: bool) -> void:
 
 func _apply_transform(motion: Vector3, snap: float) -> void:
 	var is_local_coords := use_local_space and _edit.plane != TransformPlane.VIEW
-	var new_transform := _compute_transform(_edit.mode, _edit.target_global, _edit.target_original, motion, snap, is_local_coords, _edit.plane != TransformPlane.VIEW)
-	_transform_gizmo_apply(target, new_transform, is_local_coords)
-	_update_transform_gizmo()
+	for key in _selections:
+		var item = _selections[key]
+		var new_transform := _compute_transform(_edit.mode, item.target_global, item.target_original, motion, snap, is_local_coords, _edit.plane != TransformPlane.VIEW)
+		_transform_gizmo_apply(key, new_transform, is_local_coords)
+		_update_transform_gizmo()
 
 func _compute_edit(point: Vector2) -> void:
-	_edit.target_global = target.global_transform
-	_edit.target_original = target.transform
 	_edit.click_ray = _get_ray(point)
 	_edit.click_ray_pos = _get_ray_pos(point)
 	_edit.plane = TransformPlane.VIEW
 	_update_transform_gizmo()
 	_edit.center = transform.origin
+	_edit.original = transform
+	for key in _selections:
+		var item = _selections[key]
+		item.target_global = key.global_transform
+		item.target_original = key.transform
+		_selections[key] = item
 
 func _calculate_spatial_bounds(parent: Node3D, omit_top_level: bool = false, bounds_orientation: Transform3D = Transform3D.IDENTITY) -> AABB:
 	var bounds : AABB
