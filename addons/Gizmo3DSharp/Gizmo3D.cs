@@ -6,7 +6,11 @@ using static Godot.RenderingServer;
 namespace Gizmo3DPlugin;
 
 /// <summary>
-/// Translated from C++ to C# with alterations, from:
+/// Gizmo3D encapsulates the Godot Engines 3D move/scale/rotation gizmos into a customizable node for use at runtime.
+/// The major differences are that you can edit all transformations at the same time, and customization options have
+/// been added.
+/// 
+/// Translated from C++ to C# with alterations, from
 /// - https://github.com/godotengine/godot/blob/master/editor/plugins/node_3d_editor_plugin.h
 /// - https://github.com/godotengine/godot/blob/master/editor/plugins/node_3d_editor_plugin.cpp
 /// </summary>

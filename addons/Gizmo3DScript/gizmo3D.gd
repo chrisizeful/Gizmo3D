@@ -1,9 +1,10 @@
 class_name Gizmo3D
 extends Node3D
-## Gizmo3D aims to encapsulate the Godot Engines 3D move/scale/rotation gizmos into a customizable node for use at runtime.
-## 
-## There are some differences - namely, the ability to edit all transformations at the same time and only one node can be edited at a time.
-## Translated from C++ to GDScript with alterations, from this
+## Gizmo3D encapsulates the Godot Engines 3D move/scale/rotation gizmos into a customizable node for use at runtime.
+## The major differences are that you can edit all transformations at the same time, and customization options have
+## been added.
+##
+## Translated from C++ to GDScript with alterations, from
 ## [url=https://github.com/godotengine/godot/blob/master/editor/plugins/node_3d_editor_plugin.h]source[/url] and
 ## [url=https://github.com/godotengine/godot/blob/master/editor/plugins/node_3d_editor_plugin.cpp]header[/url] file.
 
