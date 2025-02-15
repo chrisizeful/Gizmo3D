@@ -250,7 +250,12 @@ func is_selected(target : Node3D) -> bool:
 ## Remove all nodes from the list of nodes currently being edited.
 func clear_selection() -> void:
 	for key in _selections:
-		deselect(key)
+		var item = _selections[key]
+		RenderingServer.free_rid(item.sbox_instance)
+		RenderingServer.free_rid(item.sbox_instance_offset)
+		RenderingServer.free_rid(item.sbox_xray_instance)
+		RenderingServer.free_rid(item.sbox_xray_instance_offset)
+	_selections.clear()
 
 ## Get the number of nodes currently being edited.
 func get_selected_count() -> int:

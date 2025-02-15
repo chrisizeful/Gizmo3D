@@ -326,7 +326,13 @@ public partial class Gizmo3D : Node3D
     public void ClearSelection()
     {
         foreach (var item in Selections)
-            Deselect(item.Key);
+        {
+            FreeRid(item.Value.SboxInstance);
+            FreeRid(item.Value.SboxInstanceOffset);
+            FreeRid(item.Value.SboxXrayInstance);
+            FreeRid(item.Value.SboxXrayInstanceOffset);
+        }
+        Selections.Clear();
     }
 
     /// <summary>
