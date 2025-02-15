@@ -246,7 +246,7 @@ func deselect(target : Node3D) -> bool:
 
 ## Check if a node is currently selected.
 func is_selected(target : Node3D) -> bool:
-	return _selections.find_key(target) != null
+	return _selections.has(target)
 
 ## Remove all nodes from the list of nodes currently being edited.
 func clear_selection() -> void:
