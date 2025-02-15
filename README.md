@@ -8,4 +8,4 @@ Copy either Gizmo3DScript or Gizmo3DSharp from the addons folder into the addons
 Once installed, you can add a Gizmo3D node to your project. For usage, it's recommended to take a look at the demo project - note that to use the demo you will have to **git clone** the repo, since the artifact is setup for use with the Godot Asset Library.
 
 ### Licensing
-Gizmo3D is largely a port of C++ code from the Godot Engine source. Gizmo3D is licensed under MIT, while the license for the Godot Engine can be found [here](https://godotengine.org/license/).The demo project uses assets from Kenney's CC0 licensed [Mini Dungeon](https://kenney.nl/assets/mini-dungeon) asset pack. The banner logo uses the [Dimbo](https://www.dafont.com/dimbo.font) font.
+Gizmo3D is largely a port of C++ code from the Godot Engine source. Gizmo3D is licensed under MIT, while the license for the Godot Engine can be found [here](https://godotengine.org/license/). The demo project uses assets from Kenney's CC0 licensed [Mini Dungeon](https://kenney.nl/assets/mini-dungeon) asset pack. The banner logo uses the [Dimbo](https://www.dafont.com/dimbo.font) font.
