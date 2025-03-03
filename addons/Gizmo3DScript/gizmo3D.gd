@@ -48,7 +48,7 @@ var layers: int:
 			RenderingServer.instance_set_layer_mask(item.sbox_xray_instance_offset, _layers)
 
 ## The nodes this gizmo will apply transformations to.
-var _selections : Dictionary
+var _selections : Dictionary[Node3D, SelectedItem]
 var _snapping : bool
 ## Whether or not transformations will be snapped to [member rotate_snap], [member scale_snap], and/or [member translate_snap].
 var snapping: bool:

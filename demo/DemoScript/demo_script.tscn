@@ -1,8 +1,8 @@
 [gd_scene load_steps=13 format=3 uid="uid://bgx4kvwwytgf5"]
 
-[ext_resource type="Script" path="res://demo/DemoScript/demo_script.gd" id="1_2crre"]
-[ext_resource type="Script" path="res://demo/DemoScript/camera_script.gd" id="2_cntj6"]
-[ext_resource type="Script" path="res://addons/Gizmo3DScript/gizmo3D.gd" id="3_6yall"]
+[ext_resource type="Script" uid="uid://rn5fmmer8xuu" path="res://demo/DemoScript/demo_script.gd" id="1_2crre"]
+[ext_resource type="Script" uid="uid://0pojlmrsgfkn" path="res://demo/DemoScript/camera_script.gd" id="2_cntj6"]
+[ext_resource type="Script" uid="uid://e3f1ox6y6cvg" path="res://addons/Gizmo3DScript/gizmo3D.gd" id="3_6yall"]
 [ext_resource type="PackedScene" uid="uid://k7cn617qhred" path="res://kenney_mini_dungeon/coin.tscn" id="4_litru"]
 [ext_resource type="PackedScene" uid="uid://bv1ou84a8bc8x" path="res://kenney_mini_dungeon/barrel.tscn" id="5_3ni3d"]
 [ext_resource type="PackedScene" uid="uid://ds8vk7frg2dkf" path="res://kenney_mini_dungeon/chest.tscn" id="6_y0ppl"]
