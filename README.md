@@ -9,17 +9,19 @@ Once installed, you can add a Gizmo3D node to your project. For usage, it's reco
 
 ### Usage
 
-| Signal                     | C#                 | GDScript            |
-|----------------------------|--------------------|---------------------|
-| Transform Begin            | `TransformBegin`   | `transform_begin`   |
-| Transform Changed          | `TransformChanged` | `transform_changed` |
-| Transform End              | `TransformEnd`     | `transform_end`     |
+#### Signals
+C#                 | GDScript            |
+--------------------|---------------------|
+`TransformBegin`   | `transform_begin`   |
+`TransformChanged` | `transform_changed` |
+`TransformEnd`     | `transform_end`     |
 
-| Overridable Transformation | C#                | GDScript             |
-|----------------------------|-------------------|----------------------|
-| Translation                | `EditTranslate()` | `_edit_translate()`  |
-| Scale                      | `EditScale()`     | `_edit_scale()`      |
-| Rotation                   | `EditRotate()`    | `_edit_rotate()`     |
+#### Overridable Transformation
+| C#                | GDScript             |
+|-------------------|----------------------|
+| `EditTranslate()` | `_edit_translate()`  |
+| `EditScale()`     | `_edit_scale()`      |
+| `EditRotate()`    | `_edit_rotate()`     |
 
 ### Licensing
 Gizmo3D is largely a port of C++ code from the Godot Engine source. Gizmo3D is licensed under MIT, while the license for the Godot Engine can be found [here](https://godotengine.org/license/). The demo project uses assets from Kenney's CC0 licensed [Mini Dungeon](https://kenney.nl/assets/mini-dungeon) asset pack. The banner logo uses the [Dimbo](https://www.dafont.com/dimbo.font) font.
