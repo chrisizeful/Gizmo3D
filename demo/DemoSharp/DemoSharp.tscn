@@ -19,9 +19,11 @@ albedo_color = Color(0.342716, 0.199815, 0.136545, 1)
 material = SubResource("StandardMaterial3D_ggl13")
 size = Vector2(50, 50)
 
-[node name="DemoSharp" type="Node3D" node_paths=PackedStringArray("Gizmo")]
+[node name="DemoSharp" type="Node3D" node_paths=PackedStringArray("Gizmo", "Camera", "CustomLabel")]
 script = ExtResource("1_r6fd2")
 Gizmo = NodePath("Gizmo3D")
+Camera = NodePath("Camera")
+CustomLabel = NodePath("UI/Controls/PanelContainer/MarginContainer/VBoxContainer/CustomGizmo")
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment_nlrnx")
@@ -32,8 +34,6 @@ shadow_enabled = true
 
 [node name="Gizmo3D" type="Node3D" parent="."]
 script = ExtResource("2_wmj12")
-
-[node name="Selector" type="Node3D" parent="."]
 
 [node name="Camera" type="Camera3D" parent="." node_paths=PackedStringArray("Gizmo", "Message")]
 transform = Transform3D(1, 0, 0, 0, 0.866025, 0.5, 0, -0.5, 0.866025, 0, 1, 2)
@@ -116,6 +116,10 @@ text = "Snap: CTRL"
 [node name="LocalSpace" type="Label" parent="UI/Controls/PanelContainer/MarginContainer/VBoxContainer"]
 layout_mode = 2
 text = "Local Space: T"
+
+[node name="CustomGizmo" type="Label" parent="UI/Controls/PanelContainer/MarginContainer/VBoxContainer"]
+layout_mode = 2
+text = "Custom Gizmo: G"
 
 [node name="Message" type="Label" parent="UI"]
 offset_right = 40.0

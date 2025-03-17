@@ -1,3 +1,4 @@
+class_name CameraScript
 extends Camera3D
 
 const MOVE_SPEED := 20.0

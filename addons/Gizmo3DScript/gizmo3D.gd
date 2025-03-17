@@ -62,6 +62,8 @@ var message: String:
 
 var _editing: bool:
 	set(value):
+		if _editing and not value:
+			emit_signal("transform_end", _edit.mode)
 		_editing = value
 		if !value:
 			_message = ""
@@ -91,7 +93,7 @@ var show_selection_box := true
 @export_range(0.0, 1.0)
 var _opacity := .9
 ## Alpha value for all gizmos and the selection box.
-var opacity: float:
+var opacity : float:
 	get:
 		return _opacity
 	set(value):
@@ -107,7 +109,7 @@ var _colors : Array[Color] = [
 	Color(0.16, 0.55, 0.96)
 ]
 ## The colors of the gizmos. 0 is the X axis, 1 is the Y axis, and 2 is the Z axis.
-var colors: Array[Color]:
+var colors : Array[Color]:
 	get:
 		return _colors
 	set(value):
@@ -119,7 +121,7 @@ var colors: Array[Color]:
 @export
 var _selection_box_color := Color(1.0, .5, 0)
 ## The color of the AABB surrounding the target nodes.
-var selection_box_color: Color:
+var selection_box_color : Color:
 	get:
 		return _selection_box_color
 	set(value):
@@ -140,27 +142,27 @@ var rotate_snap := 15.0
 var translate_snap := 1.0
 ## Value to snap scaling to, if enabled.
 @export_range(0.0, 5.0)
-var scale_snap = .25
+var scale_snap := .25
 
-var _move_gizmo: Array[ArrayMesh] = []
-var _move_plane_gizmo: Array[ArrayMesh] = []
-var _rotate_gizmo: Array[ArrayMesh] = []
-var _scale_gizmo: Array[ArrayMesh] = []
-var _scale_plane_gizmo: Array[ArrayMesh] = []
-var _axis_gizmo: Array[ArrayMesh] = []
-var _gizmo_color: Array[StandardMaterial3D] = []
-var _plane_gizmo_color: Array[StandardMaterial3D] = []
-var _rotate_gizmo_color: Array[ShaderMaterial] = []
-var _gizmo_color_hl: Array[StandardMaterial3D] = []
-var _plane_gizmo_color_hl: Array[StandardMaterial3D] = []
-var _rotate_gizmo_color_hl: Array[ShaderMaterial] = []
+var _move_gizmo : Array[ArrayMesh] = []
+var _move_plane_gizmo : Array[ArrayMesh] = []
+var _rotate_gizmo : Array[ArrayMesh] = []
+var _scale_gizmo : Array[ArrayMesh] = []
+var _scale_plane_gizmo : Array[ArrayMesh] = []
+var _axis_gizmo : Array[ArrayMesh] = []
+var _gizmo_color : Array[StandardMaterial3D] = []
+var _plane_gizmo_color : Array[StandardMaterial3D] = []
+var _rotate_gizmo_color : Array[ShaderMaterial] = []
+var _gizmo_color_hl : Array[StandardMaterial3D] = []
+var _plane_gizmo_color_hl : Array[StandardMaterial3D] = []
+var _rotate_gizmo_color_hl : Array[ShaderMaterial] = []
 
-var _move_gizmo_instance: Array[RID] = []
-var _move_plane_gizmo_instance: Array[RID] = []
-var _rotate_gizmo_instance: Array[RID] = []
-var _scale_gizmo_instance: Array[RID] = []
-var _scale_plane_gizmo_instance: Array[RID] = []
-var _axis_gizmo_instance: Array[RID] = []
+var _move_gizmo_instance : Array[RID] = []
+var _move_plane_gizmo_instance : Array[RID] = []
+var _rotate_gizmo_instance : Array[RID] = []
+var _scale_gizmo_instance : Array[RID] = []
+var _scale_plane_gizmo_instance : Array[RID] = []
+var _axis_gizmo_instance : Array[RID] = []
 
 var _selection_box : ArrayMesh
 var _selection_box_xray : ArrayMesh
@@ -173,6 +175,14 @@ var _gizmo_scale := 1.0
 enum ToolMode { MOVE = 1, ROTATE = 2, SCALE = 4, ALL = 7 }
 enum TransformMode { NONE, ROTATE, TRANSLATE, SCALE }
 enum TransformPlane { VIEW, X, Y, Z, YZ, XZ, XY }
+
+## Emitted when the user begins interacting with the gizmo.
+signal transform_begin(mode : TransformMode)
+## Emitted as the user continues to interact with the gizmo.
+## NOTE: For rotations, value is in radians.
+signal transform_changed(mode : TransformMode, value : Vector3)
+## Emitted when the user stops interacting with the gizmo.
+signal transform_end(mode : TransformMode)
 
 func _ready() -> void:
 	_move_gizmo.resize(3)
@@ -205,24 +215,27 @@ func _ready() -> void:
 	colors = _colors
 	selection_box_color = _selection_box_color
 
-func _unhandled_input(event: InputEvent) -> void:
+func _unhandled_input(event : InputEvent) -> void:
 	_hovering = false
 	if !visible:
 		_editing = false
 	elif event is InputEventKey and event.keycode == KEY_CTRL:
 		_snapping = event.pressed
 	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
-		_editing = event.pressed
-		if !_editing:
+		if !event.pressed:
+			_editing = false
 			_update_transform_gizmo_view()
 			return
 		_edit.mouse_pos = event.position
 		_editing = _transform_gizmo_select(event.position)
+		if _editing:
+			emit_signal("transform_begin", _edit.mode)
 	elif event is InputEventMouseMotion:
 		if _editing:
 			if event.button_mask & MOUSE_BUTTON_MASK_LEFT:
 				_edit.mouse_pos = event.position
-				_update_transform(false)
+				var value := _update_transform(false)
+				emit_signal("transform_changed", _edit.mode, value)
 			return
 		_hovering = _transform_gizmo_select(event.position, true)
 
@@ -264,10 +277,10 @@ func get_selected_count() -> int:
 
 #endregion
 
-func _enter_tree():
+func _enter_tree() -> void:
 	get_tree().root.focus_exited.connect(_on_focus_exited)
 
-func _process(delta: float) -> void:
+func _process(delta : float) -> void:
 	_update_transform_gizmo()
 
 func _exit_tree() -> void:
@@ -800,7 +813,7 @@ func _generate_selection_boxes():
 	st_xray.set_material(_selection_box_xray_mat)
 	_selection_box_xray = st.commit()
 
-func _select_gizmo_highlight_axis(axis: int) -> void:
+func _select_gizmo_highlight_axis(axis : int) -> void:
 	for i in range(3):
 		if i == axis:
 			_move_gizmo[i].surface_set_material(0, _gizmo_color_hl[i])
@@ -866,7 +879,7 @@ func _get_editor_data() -> SelectedItem:
 	RenderingServer.instance_geometry_set_flag(item.sbox_xray_instance_offset, RenderingServer.INSTANCE_FLAG_USE_BAKED_LIGHT, false)
 	return item
 
-func _transform_gizmo_select(screen_pos: Vector2, highlight_only: bool = false):
+func _transform_gizmo_select(screen_pos : Vector2, highlight_only := false):
 	if !visible:
 		return false
 	
@@ -1043,7 +1056,7 @@ func _transform_gizmo_select(screen_pos: Vector2, highlight_only: bool = false):
 		_select_gizmo_highlight_axis(-1)
 	return false
 
-func _transform_gizmo_apply(node: Node3D, transform: Transform3D, local: bool) -> void:
+func _transform_gizmo_apply(node : Node3D, transform : Transform3D, local : bool) -> void:
 	if transform.basis.determinant() == 0:
 		return
 	if local:
@@ -1051,7 +1064,7 @@ func _transform_gizmo_apply(node: Node3D, transform: Transform3D, local: bool) -
 	else:
 		node.global_transform = transform
 
-func _compute_transform(mode: TransformMode, original: Transform3D, original_local: Transform3D, motion: Vector3, extra: float, local: bool, orthogonal: bool) -> Transform3D:
+func _compute_transform(mode : TransformMode, original : Transform3D, original_local : Transform3D, motion : Vector3, extra : float, local : bool, orthogonal : bool) -> Transform3D:
 	match mode:
 		TransformMode.SCALE:
 			if snapping:
@@ -1089,7 +1102,7 @@ func _compute_transform(mode: TransformMode, original: Transform3D, original_loc
 	push_error("Gizmo3D#ComputeTransform: Invalid mode")
 	return Transform3D()
 
-func _update_transform(shift: bool) -> void:
+func _update_transform(shift : bool) -> Vector3:
 	var ray_pos := _get_ray_pos(_edit.mouse_pos)
 	var ray := _get_ray(_edit.mouse_pos)
 	var snap := DEFAULT_FLOAT_STEP
@@ -1128,11 +1141,11 @@ func _update_transform(shift: bool) -> void:
 			
 			var sintersection := splane.intersects_ray(ray_pos, ray)
 			if sintersection == null:
-				return
+				return Vector3.ZERO
 			
 			var sclick := splane.intersects_ray(_edit.click_ray_pos, _edit.click_ray)
 			if sclick == null:
-				return
+				return Vector3.ZERO
 			
 			var smotion = sintersection - sclick
 			if _edit.plane != TransformPlane.VIEW:
@@ -1144,7 +1157,7 @@ func _update_transform(shift: bool) -> void:
 				var center_click_dist = sclick.distance_to(_edit.center)
 				var center_inters_dist = sintersection.distance_to(_edit.center)
 				if center_click_dist == 0:
-					return
+					return Vector3.ZERO
 				var sscale = center_inters_dist - center_click_dist
 				smotion = Vector3(sscale, sscale, sscale)
 			
@@ -1156,6 +1169,8 @@ func _update_transform(shift: bool) -> void:
 			if snapping:
 				snap = scale_snap
 			
+			smotion = _edit_scale(smotion)
+			
 			var smotion_snapped = smotion.snappedf(snap)
 			var x := "%.3f" % smotion_snapped.x
 			var y := "%.3f" % smotion_snapped.y
@@ -1165,6 +1180,7 @@ func _update_transform(shift: bool) -> void:
 				smotion = _edit.original.basis.inverse() * smotion
 			
 			_apply_transform(smotion, snap)
+			return smotion
 		TransformMode.TRANSLATE:
 			var tmotion_mask : Vector3
 			var tplane : Plane
@@ -1194,11 +1210,11 @@ func _update_transform(shift: bool) -> void:
 			
 			var tintersection := tplane.intersects_ray(ray_pos, ray)
 			if tintersection == null:
-				return
+				return Vector3.ZERO
 			
 			var tclick := tplane.intersects_ray(_edit.click_ray_pos, _edit.click_ray)
 			if tclick == null:
-				return
+				return Vector3.ZERO
 			
 			var tmotion = tintersection - tclick
 			if _edit.plane != TransformPlane.VIEW and !tplane_mv:
@@ -1210,6 +1226,8 @@ func _update_transform(shift: bool) -> void:
 			if snapping:
 				snap = translate_snap
 			
+			tmotion = _edit_translate(tmotion)
+			
 			var tmotion_snapped = tmotion.snappedf(snap)
 			var x := "%.3f" % tmotion_snapped.x
 			var y := "%.3f" % tmotion_snapped.y
@@ -1219,6 +1237,7 @@ func _update_transform(shift: bool) -> void:
 				tmotion = transform.basis.inverse() * tmotion
 			
 			_apply_transform(tmotion, snap)
+			return tmotion
 		TransformMode.ROTATE:
 			var rplane : Plane
 			var camera := get_viewport().get_camera_3d()
@@ -1249,11 +1268,11 @@ func _update_transform(shift: bool) -> void:
 			
 			var rintersection := rplane.intersects_ray(ray_pos, ray)
 			if rintersection == null:
-				return
+				return Vector3.ZERO
 			
 			var rclick := rplane.intersects_ray(_edit.click_ray_pos, _edit.click_ray)
 			if rclick == null:
-				return
+				return Vector3.ZERO
 			
 			var orthogonal_threshold := cos(deg_to_rad(85.0))
 			var axis_is_orthogonal = abs(rplane.normal.dot(global_axis)) < orthogonal_threshold
@@ -1272,18 +1291,27 @@ func _update_transform(shift: bool) -> void:
 			if snapping:
 				snap = rotate_snap
 			
+			var rlocal_coords = use_local_space and _edit.plane != TransformPlane.VIEW # Disable local transformation for TRANSFORM_VIEW
+			var compute_axis := global_axis
+			if rlocal_coords:
+				compute_axis = local_axis
+			
+			var result := _edit_rotate(compute_axis * angle)
+			if result != compute_axis * angle:
+				compute_axis = result.normalized()
+				angle = result.length()
+			
 			angle = snappedf(rad_to_deg(angle), snap)
 			var d := "%.3f" % angle
 			_message = TranslationServer.translate("Rotating") + ": {" + d + "} " + TranslationServer.translate("degrees")
 			angle = deg_to_rad(angle)
 			
-			var rlocal_coords = use_local_space and _edit.plane != TransformPlane.VIEW # Disable local transformation for TRANSFORM_VIEW
-			var compute_axis := global_axis
-			if rlocal_coords:
-				compute_axis = local_axis
 			_apply_transform(compute_axis, angle)
+			return compute_axis * angle
+	
+	return Vector3.ZERO
 
-func _apply_transform(motion: Vector3, snap: float) -> void:
+func _apply_transform(motion : Vector3, snap : float) -> void:
 	var is_local_coords := use_local_space and _edit.plane != TransformPlane.VIEW
 	for key in _selections:
 		var item = _selections[key]
@@ -1304,7 +1332,7 @@ func _compute_edit(point: Vector2) -> void:
 		item.target_original = key.transform
 		_selections[key] = item
 
-func _calculate_spatial_bounds(parent: Node3D, omit_top_level: bool = false, bounds_orientation: Transform3D = Transform3D.IDENTITY) -> AABB:
+func _calculate_spatial_bounds(parent : Node3D, omit_top_level := false, bounds_orientation := Transform3D.IDENTITY) -> AABB:
 	var bounds : AABB
 	
 	var tbounds_orientation : Transform3D
@@ -1333,11 +1361,23 @@ func _calculate_spatial_bounds(parent: Node3D, omit_top_level: bool = false, bou
 	
 	return bounds
 
-func _get_ray_pos(pos: Vector2) -> Vector3:
+func _get_ray_pos(pos : Vector2) -> Vector3:
 	return get_viewport().get_camera_3d().project_ray_origin(pos)
 
-func _get_ray(pos: Vector2) -> Vector3:
+func _get_ray(pos : Vector2) -> Vector3:
 	return get_viewport().get_camera_3d().project_ray_normal(pos)
 
 func _get_camera_normal() -> Vector3:
 	return -get_viewport().get_camera_3d().global_transform.basis[2]
+
+## Optional method to override the user translating the gizmo.
+func _edit_translate(translation : Vector3) -> Vector3:
+	return translation
+
+## Optional method to override the user scaling the gizmo.
+func _edit_scale(scale : Vector3) -> Vector3:
+	return scale
+
+## Optional method to override the user rotating the gizmo.
+func _edit_rotate(rotation : Vector3) -> Vector3:
+	return rotation

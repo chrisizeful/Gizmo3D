@@ -2,12 +2,32 @@ extends Node3D
 
 @export
 var gizmo : Gizmo3D
+@export
+var camera : CameraScript
+@export
+var custom_label : Label
 var _add : bool
 
 func _process(delta):
 	_add = Input.is_action_pressed("add_target")
 
 func _input(event: InputEvent) -> void:
+	# Swap gizmo with custom gizmo or vice versa
+	if event.is_action_pressed("custom_gizmo"):
+		var parent := gizmo.get_parent()
+		var index := gizmo.get_index()
+		gizmo.queue_free()
+		if gizmo is CustomGizmo:
+			gizmo = Gizmo3D.new()
+			custom_label.text = "Custom Gizmo: G"
+		else:
+			gizmo = CustomGizmo.new()
+			custom_label.text = "Default Gizmo: G"
+		camera.gizmo = gizmo
+		parent.add_child(gizmo)
+		parent.move_child(gizmo, index)
+	
+	# Toggle between local and global space
 	if !gizmo.editing and event.is_action_pressed("use_local_space"):
 		gizmo.use_local_space = !gizmo.use_local_space
 	# Prevent object picking if user is interacting with the gizmo

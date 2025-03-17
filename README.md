@@ -1,6 +1,6 @@
 ![Banner](https://i.imgur.com/qyWHmxW.png)
 
-Gizmo3D encapsulates the Godot Engines 3D move/scale/rotation gizmos into a customizable node for use at runtime. The major differences are that you can edit all transformations at the same time, and customization options have been added. The selection box and axes can be toggled, colors changed, snapping intervals changed, and more. It is available in both C# and GDScript.
+Gizmo3D encapsulates the Godot Engines 3D move/scale/rotation gizmos into a customizable node for use at runtime. The major differences are that you can edit all transformations at the same time, and customization options have been added. The selection box and axes can be toggled, colors changed, snapping intervals changed, and more. Transformation methods can be easily overriden to customize the default behavior. It is available in both C# and GDScript.
 
 ### Installation
 Copy either Gizmo3DScript or Gizmo3DSharp from the addons folder into the addons folder of your project. Read more about installing and enabling addons [here](https://docs.godotengine.org/en/stable/tutorials/plugins/editor/installing_plugins.html). 

@@ -12,7 +12,7 @@ public partial class CameraSharp : Camera3D
 	readonly StringName forward = "move_forward", backward = "move_backward";
 
 	[Export]
-	public Gizmo3D Gizmo { get; private set; }
+	public Gizmo3D Gizmo { get; set; }
 	[Export]
 	public Label Message { get; private set; }
 

@@ -1,3 +1,4 @@
+## Represents a single selected node.
 class_name SelectedItem
 extends Object
 

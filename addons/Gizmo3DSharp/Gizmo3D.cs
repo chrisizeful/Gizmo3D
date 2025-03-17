@@ -89,6 +89,8 @@ public partial class Gizmo3D : Node3D
         get => editing;
         private set
         {
+            if (editing && !value)
+                EmitSignal(SignalName.TransformEnd, (int) Edit.Mode);
             editing = value;
             if (!value)
                 Message = "";
@@ -131,12 +133,12 @@ public partial class Gizmo3D : Node3D
         }
     }
 
-    Color[] colors = new Color[]
-    {
+    Color[] colors =
+    [
         new(0.96f, 0.20f, 0.32f),
         new(0.53f, 0.84f, 0.01f),
         new(0.16f, 0.55f, 0.96f)
-    };
+    ];
     /// <summary>
     /// The colors of the gizmos. 0 is the X axis, 1 is the Y axis, and 2 is the Z axis.
     /// </summary>
@@ -221,9 +223,12 @@ public partial class Gizmo3D : Node3D
 
     [Flags]
     public enum ToolMode { Move = 1, Rotate = 2, Scale = 4, All = 7 };
-    enum TransformMode { None, Rotate, Translate, Scale };
+    public enum TransformMode { None, Rotate, Translate, Scale };
     enum TransformPlane { View, X, Y, Z, YZ, XZ, XY, };
 
+    /// <summary>
+    /// Temporary data holder for interacting with the gizmo.
+    /// </summary>
     struct EditData
     {
         public Transform3D Original;
@@ -234,12 +239,32 @@ public partial class Gizmo3D : Node3D
         public Vector2 MousePos;
     }
 
+    /// <summary>
+    /// Represents a single selected node.
+    /// </summary>
     struct SelectedItem
     {
         public Transform3D TargetOriginal, TargetGlobal;
         public Rid SboxInstance, SboxInstanceOffset;
         public Rid SboxXrayInstance, SboxXrayInstanceOffset;
     };
+
+    /// <summary>
+    /// Emitted when the user begins interacting with the gizmo.
+    /// </summary>
+    [Signal]
+    public delegate void TransformBeginEventHandler(int mode);
+    /// <summary>
+    /// Emitted as the user continues to interact with the gizmo.
+    /// NOTE: For rotations, value is in radians.
+    /// </summary>
+    [Signal]
+    public delegate void TransformChangedEventHandler(int mode, Vector3 value);
+    /// <summary>
+    /// Emitted when the user stops interacting with the gizmo.
+    /// </summary>
+    [Signal]
+    public delegate void TransformEndEventHandler(int mode);
 
     public override void _Ready()
     {
@@ -263,14 +288,16 @@ public partial class Gizmo3D : Node3D
         }
         else if (@event is InputEventMouseButton button && button.ButtonIndex == MouseButton.Left)
         {
-            Editing = button.Pressed;
-            if (!Editing)
+            if (!button.Pressed)
             {
+                Editing = false;
                 UpdateTransformGizmo();
                 return;
             }
             Edit.MousePos = button.Position;
             Editing = TransformGizmoSelect(button.Position);
+            if (Editing)
+                EmitSignal(SignalName.TransformBegin, (int) Edit.Mode);
         }
         else if (@event is InputEventMouseMotion motion)
         {
@@ -279,7 +306,8 @@ public partial class Gizmo3D : Node3D
                 if (motion.ButtonMask.HasFlag(MouseButtonMask.Left))
                 {
                     Edit.MousePos = motion.Position;
-                    UpdateTransform(false);
+                    Vector3 value = UpdateTransform(false);
+                    EmitSignal(SignalName.TransformChanged, (int) Edit.Mode, value);
                 }
                 return;
             }
@@ -692,14 +720,14 @@ void fragment() {
 
                 // Cube arrow profile
                 arrowPoints = 6;
-                arrow = new[] {
+                arrow = [
                     nivec * 0.0f + ivec * 0.0f,
                     nivec * 0.01f + ivec * 0.0f,
                     nivec * 0.01f + ivec * 1.0f * GIZMO_SCALE_OFFSET,
                     nivec * 0.07f + ivec * 1.0f * GIZMO_SCALE_OFFSET,
                     nivec * 0.07f + ivec * 1.2f * GIZMO_SCALE_OFFSET,
                     nivec * 0.0f + ivec * 1.2f * GIZMO_SCALE_OFFSET
-                };
+                ];
 
                 arrowSides = 4;
                 arrowSidesStep = Mathf.Tau / arrowSides;
@@ -733,21 +761,21 @@ void fragment() {
                 surfTool.Begin(Mesh.PrimitiveType.Triangles);
 
                 vec = ivec2 - ivec3;
-                plane = new[] {
+                plane = [
                     vec * GIZMO_PLANE_DST,
                     vec * GIZMO_PLANE_DST + ivec2 * GIZMO_PLANE_SIZE,
                     vec * (GIZMO_PLANE_DST + GIZMO_PLANE_SIZE),
                     vec * GIZMO_PLANE_DST - ivec3 * GIZMO_PLANE_SIZE
-                };
+                ];
 
                 ma = new(ivec, Mathf.Pi / 2);
 
-                points = new[] {
+                points = [
                     ma * plane[0],
                     ma * plane[1],
                     ma * plane[2],
                     ma * plane[3]
-                };
+                ];
                 surfTool.AddVertex(points[0]);
                 surfTool.AddVertex(points[1]);
                 surfTool.AddVertex(points[2]);
@@ -1326,7 +1354,7 @@ void fragment() {
         }
     }
 
-    void UpdateTransform(bool shift)
+    Vector3 UpdateTransform(bool shift)
     {
         Vector3 rayPos = GetRayPos(Edit.MousePos);
         Vector3 ray = GetRay(Edit.MousePos);
@@ -1408,13 +1436,15 @@ void fragment() {
                 if (Snapping)
                     snap = ScaleSnap;
 
+                smotion = EditScale(smotion);
+
                 Vector3 smotionSnapped = smotion.Snapped(snap);
                 Message = TranslationServer.Translate("Scaling") + $": ({smotionSnapped.X:0.###}, {smotionSnapped.Y:0.###}, {smotionSnapped.Z:0.###})";
                 if (slocalCoords)
                     smotion = Edit.Original.Basis.Inverse() * smotion;
 
                 ApplyTransform(smotion, snap);
-                break;
+                return smotion;
 
             case TransformMode.Translate:
                 Vector3 tmotionMask = default;
@@ -1470,13 +1500,15 @@ void fragment() {
                 if (Snapping)
                     snap = TranslateSnap;
 
+                tmotion = EditTranslate(tmotion);
+
                 Vector3 tmotionSnapped = tmotion.Snapped(snap);
                 Message = TranslationServer.Translate("Translating") + $": ({tmotionSnapped.X:0.###}, {tmotionSnapped.Y:0.###}, {tmotionSnapped.Z:0.###})";
                 if (tlocalCoords)
                     tmotion = Transform.Basis.Inverse() * tmotion;
 
                 ApplyTransform(tmotion, snap);
-                break;
+                return tmotion;
 
             case TransformMode.Rotate:
                 Plane rplane;
@@ -1549,17 +1581,27 @@ void fragment() {
                 if (Snapping)
                     snap = RotateSnap;
 
+                bool rlocalCoords = UseLocalSpace && Edit.Plane != TransformPlane.View; // Disable local transformation for TRANSFORM_VIEW
+                Vector3 computeAxis = rlocalCoords ? localAxis : globalAxis;
+
+                Vector3 result = EditRotate(computeAxis * angle);
+                if (result != computeAxis * angle)
+                {
+                    computeAxis = result.Normalized();
+                    angle = result.Length();
+                }
+
                 angle = Mathf.Snapped(Mathf.RadToDeg(angle), snap);
                 Message = TranslationServer.Translate("Rotating") + $": {angle:0.###} " + TranslationServer.Translate("degrees");
                 angle = Mathf.DegToRad(angle);
 
-                bool rlocalCoords = UseLocalSpace && Edit.Plane != TransformPlane.View; // Disable local transformation for TRANSFORM_VIEW
-                Vector3 computeAxis = rlocalCoords ? localAxis : globalAxis;
                 ApplyTransform(computeAxis, angle);
-                break;
+                return computeAxis * angle;
             default:
                 break;
         }
+
+        return default;
 	}
 
     void ApplyTransform(Vector3 motion, float snap)
@@ -1628,4 +1670,24 @@ void fragment() {
     Vector3 GetRayPos(Vector2 pos) => GetViewport().GetCamera3D().ProjectRayOrigin(pos);
     Vector3 GetRay(Vector2 pos) => GetViewport().GetCamera3D().ProjectRayNormal(pos);
     Vector3 GetCameraNormal() => -GetViewport().GetCamera3D().GlobalTransform.Basis[2];
+
+    /// <summary>
+    /// Optional method to override the user translating the gizmo.
+    /// </summary>
+    /// <param name="translation">The current translation.</param>
+    /// <returns>The new translation.</returns>
+    protected virtual Vector3 EditTranslate(Vector3 translation) => translation;
+    /// <summary>
+    /// Optional method to override the user scaling the gizmo.
+    /// </summary>
+    /// <param name="scale">The current scale.</param>
+    /// <returns>The new scale.</returns>
+    protected virtual Vector3 EditScale(Vector3 scale) => scale;
+    /// <summary>
+    /// Optional method to override the user rotating the gizmo.
+    /// NOTE: Provided rotation is in radians.
+    /// </summary>
+    /// <param name="rotation">The current rotation.</param>
+    /// <returns>The new rotation.</returns>
+    protected virtual Vector3 EditRotate(Vector3 rotation) => rotation;
 }

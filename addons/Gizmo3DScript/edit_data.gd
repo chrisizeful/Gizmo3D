@@ -1,3 +1,4 @@
+## Temporary data holder for interacting with the gizmo.
 class_name EditData
 extends Object
 

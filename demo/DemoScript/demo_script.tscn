@@ -19,9 +19,11 @@ albedo_color = Color(0.342716, 0.199815, 0.136545, 1)
 material = SubResource("StandardMaterial3D_ggl13")
 size = Vector2(50, 50)
 
-[node name="DemoScript" type="Node3D" node_paths=PackedStringArray("gizmo")]
+[node name="DemoScript" type="Node3D" node_paths=PackedStringArray("gizmo", "camera", "custom_label")]
 script = ExtResource("1_2crre")
 gizmo = NodePath("Gizmo3D")
+camera = NodePath("Camera")
+custom_label = NodePath("UI/Controls/PanelContainer/MarginContainer/VBoxContainer/CustomGizmo")
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment_nlrnx")
@@ -30,16 +32,16 @@ environment = SubResource("Environment_nlrnx")
 transform = Transform3D(0.838671, 0.221525, -0.497553, 0, 0.913545, 0.406737, 0.544639, -0.341118, 0.766164, -2.5, 1.5, 0)
 shadow_enabled = true
 
+[node name="Gizmo3D" type="Node3D" parent="."]
+script = ExtResource("3_6yall")
+_colors = Array[Color]([Color(0.110124, 0.605119, 0.705983, 1), Color(0.073115, 0.456205, 0.535289, 1), Color(0.0479613, 0.352446, 0.415412, 1)])
+_selection_box_color = Color(0.702439, 0.601297, 0.864144, 1)
+
 [node name="Camera" type="Camera3D" parent="." node_paths=PackedStringArray("gizmo", "message")]
 transform = Transform3D(0.999429, 0.0168916, -0.029257, 0, 0.866025, 0.5, 0.0337832, -0.499715, 0.865531, -0.10642, 1, 2.01268)
 script = ExtResource("2_cntj6")
 gizmo = NodePath("../Gizmo3D")
 message = NodePath("../UI/Message")
-
-[node name="Gizmo3D" type="Node3D" parent="."]
-script = ExtResource("3_6yall")
-_colors = Array[Color]([Color(0.110124, 0.605119, 0.705983, 1), Color(0.073115, 0.456205, 0.535289, 1), Color(0.0479613, 0.352446, 0.415412, 1)])
-_selection_box_color = Color(0.702439, 0.601297, 0.864144, 1)
 
 [node name="Objects" type="Node3D" parent="."]
 
@@ -117,6 +119,10 @@ text = "Snap: CTRL"
 [node name="LocalSpace" type="Label" parent="UI/Controls/PanelContainer/MarginContainer/VBoxContainer"]
 layout_mode = 2
 text = "Local Space: T"
+
+[node name="CustomGizmo" type="Label" parent="UI/Controls/PanelContainer/MarginContainer/VBoxContainer"]
+layout_mode = 2
+text = "Custom Gizmo: G"
 
 [node name="Message" type="Label" parent="UI"]
 offset_right = 40.0
