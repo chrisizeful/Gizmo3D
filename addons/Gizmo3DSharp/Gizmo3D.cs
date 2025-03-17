@@ -350,6 +350,11 @@ public partial class Gizmo3D : Node3D
 
 #endregion
 
+    public override void _EnterTree()
+    {
+        GetTree().Root.FocusExited += OnFocusExited;
+    }
+
     public override void _Process(double delta)
     {
         UpdateTransformGizmo();
@@ -357,6 +362,7 @@ public partial class Gizmo3D : Node3D
 
     public override void _ExitTree()
     {
+        GetTree().Root.FocusExited -= OnFocusExited;
         for (int i = 0; i < 3; i++)
         {
             FreeRid(MoveGizmoInstance[i]);
@@ -369,6 +375,11 @@ public partial class Gizmo3D : Node3D
         // Rotation white outline
         FreeRid(RotateGizmoInstance[3]);
         ClearSelection();
+    }
+
+    void OnFocusExited()
+    {
+        Editing = Hovering = Snapping = false;
     }
 
     void InitGizmoInstance()

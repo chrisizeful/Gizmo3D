@@ -264,10 +264,14 @@ func get_selected_count() -> int:
 
 #endregion
 
+func _enter_tree():
+	get_tree().root.focus_exited.connect(_on_focus_exited)
+
 func _process(delta: float) -> void:
 	_update_transform_gizmo()
 
 func _exit_tree() -> void:
+	get_tree().root.focus_exited.disconnect(_on_focus_exited)
 	for i in range(3):
 		RenderingServer.free_rid(_move_gizmo_instance[i])
 		RenderingServer.free_rid(_move_plane_gizmo_instance[i])
@@ -277,6 +281,11 @@ func _exit_tree() -> void:
 		RenderingServer.free_rid(_axis_gizmo_instance[i])
 	RenderingServer.free_rid(_rotate_gizmo_instance[3])
 	clear_selection()
+
+func _on_focus_exited():
+	_editing = false
+	_hovering = false
+	_snapping = false
 
 func _init_gizmo_instance() -> void:
 	for i in range(3):
