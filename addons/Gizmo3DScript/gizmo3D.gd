@@ -282,7 +282,7 @@ func _exit_tree() -> void:
 	RenderingServer.free_rid(_rotate_gizmo_instance[3])
 	clear_selection()
 
-func _on_focus_exited():
+func _on_focus_exited() -> void:
 	_editing = false
 	_hovering = false
 	_snapping = false
