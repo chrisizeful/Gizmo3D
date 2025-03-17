@@ -1435,13 +1435,13 @@ void fragment() {
 
                 if (Snapping)
                     snap = ScaleSnap;
-
+                if (slocalCoords)
+                    smotion = Edit.Original.Basis.Inverse() * smotion;
+                
                 smotion = EditScale(smotion);
 
                 Vector3 smotionSnapped = smotion.Snapped(snap);
                 Message = TranslationServer.Translate("Scaling") + $": ({smotionSnapped.X:0.###}, {smotionSnapped.Y:0.###}, {smotionSnapped.Z:0.###})";
-                if (slocalCoords)
-                    smotion = Edit.Original.Basis.Inverse() * smotion;
 
                 ApplyTransform(smotion, snap);
                 return smotion;
@@ -1499,13 +1499,13 @@ void fragment() {
 
                 if (Snapping)
                     snap = TranslateSnap;
-
+                if (tlocalCoords)
+                    tmotion = Transform.Basis.Inverse() * tmotion;
+                
                 tmotion = EditTranslate(tmotion);
 
                 Vector3 tmotionSnapped = tmotion.Snapped(snap);
                 Message = TranslationServer.Translate("Translating") + $": ({tmotionSnapped.X:0.###}, {tmotionSnapped.Y:0.###}, {tmotionSnapped.Z:0.###})";
-                if (tlocalCoords)
-                    tmotion = Transform.Basis.Inverse() * tmotion;
 
                 ApplyTransform(tmotion, snap);
                 return tmotion;

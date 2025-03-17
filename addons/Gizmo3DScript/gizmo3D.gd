@@ -1168,6 +1168,8 @@ func _update_transform(shift : bool) -> Vector3:
 			
 			if snapping:
 				snap = scale_snap
+			if slocal_coords:
+				smotion = _edit.original.basis.inverse() * smotion
 			
 			smotion = _edit_scale(smotion)
 			
@@ -1176,8 +1178,6 @@ func _update_transform(shift : bool) -> Vector3:
 			var y := "%.3f" % smotion_snapped.y
 			var z := "%.3f" % smotion_snapped.z
 			_message = TranslationServer.translate("Scaling") + ": (" + x + ", " + y + ", " + z + ")"
-			if slocal_coords:
-				smotion = _edit.original.basis.inverse() * smotion
 			
 			_apply_transform(smotion, snap)
 			return smotion
@@ -1225,6 +1225,8 @@ func _update_transform(shift : bool) -> Vector3:
 			
 			if snapping:
 				snap = translate_snap
+			if tlocal_coords:
+				tmotion = transform.basis.inverse() * tmotion
 			
 			tmotion = _edit_translate(tmotion)
 			
@@ -1233,8 +1235,6 @@ func _update_transform(shift : bool) -> Vector3:
 			var y := "%.3f" % tmotion_snapped.y
 			var z := "%.3f" % tmotion_snapped.z
 			_message = TranslationServer.translate("Translating") + ": (" + x + ", " + y + ", " + z + ")"
-			if tlocal_coords:
-				tmotion = transform.basis.inverse() * tmotion
 			
 			_apply_transform(tmotion, snap)
 			return tmotion
