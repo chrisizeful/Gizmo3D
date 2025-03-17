@@ -16,7 +16,7 @@ C#                 | GDScript            |
 `TransformChanged` | `transform_changed` |
 `TransformEnd`     | `transform_end`     |
 
-#### Overridable Transformation
+#### Overridable Transformations
 | C#                | GDScript             |
 |-------------------|----------------------|
 | `EditTranslate()` | `_edit_translate()`  |
