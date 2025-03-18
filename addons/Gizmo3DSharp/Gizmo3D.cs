@@ -887,7 +887,7 @@ void fragment() {
             InstanceSetTransform(ScaleGizmoInstance[i], axisAngle);
             InstanceSetVisible(ScaleGizmoInstance[i], (Mode & ToolMode.Scale) == ToolMode.Scale);
             InstanceSetTransform(ScalePlaneGizmoInstance[i], axisAngle);
-            InstanceSetVisible(ScalePlaneGizmoInstance[i], Mode == ToolMode.Scale);
+            InstanceSetVisible(ScalePlaneGizmoInstance[i], (Mode & ToolMode.Scale) == ToolMode.Scale && (Mode & ToolMode.Move) == 0);
             InstanceSetTransform(AxisGizmoInstance[i], xform);
         }
 
