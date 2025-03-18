@@ -16,6 +16,9 @@ public partial class DemoSharp : Node3D
 	readonly StringName useLocalSpace = "use_local_space";
 	readonly StringName addTarget = "add_target";
 	readonly StringName customGizmo = "custom_gizmo";
+	readonly StringName moveMode = "move_mode";
+	readonly StringName scaleMode = "scale_mode";
+	readonly StringName rotateMode = "rotate_mode";
 
     public override void _Process(double delta)
     {
@@ -37,6 +40,14 @@ public partial class DemoSharp : Node3D
 			CustomLabel.Text = Gizmo is CustomGizmo ? "Default Gizmo: G" : "Custom Gizmo: G";
 		}
 
+		// Toggle modes
+		if (@event.IsActionPressed(moveMode))
+			Gizmo.Mode ^= Gizmo3D.ToolMode.Move;
+		if (@event.IsActionPressed(scaleMode))
+			Gizmo.Mode ^= Gizmo3D.ToolMode.Scale;
+		if (@event.IsActionPressed(rotateMode))
+			Gizmo.Mode ^= Gizmo3D.ToolMode.Rotate;
+		
 		// Toggle between local and global space
 		if (!Gizmo.Editing && @event.IsActionPressed(useLocalSpace))
 			Gizmo.UseLocalSpace = !Gizmo.UseLocalSpace;

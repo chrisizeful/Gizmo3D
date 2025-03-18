@@ -20,7 +20,8 @@ const GIZMO_SCALE_OFFSET := GIZMO_CIRCLE_SIZE - .3
 const GIZMO_ARROW_OFFSET := GIZMO_CIRCLE_SIZE + .15
 
 ## Used to limit which transformations are being edited.
-@export_flags("Move", "Rotate", "Scale") var mode = ToolMode.MOVE | ToolMode.SCALE | ToolMode.ROTATE
+@export_flags("Move", "Rotate", "Scale")
+var mode = ToolMode.MOVE | ToolMode.SCALE | ToolMode.ROTATE
 
 @export_flags_3d_render
 var _layers := 1

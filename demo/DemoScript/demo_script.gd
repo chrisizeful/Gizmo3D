@@ -27,6 +27,14 @@ func _input(event: InputEvent) -> void:
 		parent.add_child(gizmo)
 		parent.move_child(gizmo, index)
 	
+	# Toggle modes
+	if event.is_action_pressed("move_mode"):
+		gizmo.mode ^= Gizmo3D.ToolMode.MOVE
+	if event.is_action_pressed("scale_mode"):
+		gizmo.mode ^= Gizmo3D.ToolMode.SCALE
+	if event.is_action_pressed("rotate_mode"):
+		gizmo.mode ^= Gizmo3D.ToolMode.ROTATE
+	
 	# Toggle between local and global space
 	if !gizmo.editing and event.is_action_pressed("use_local_space"):
 		gizmo.use_local_space = !gizmo.use_local_space

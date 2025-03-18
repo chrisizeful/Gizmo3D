@@ -92,6 +92,9 @@ layout_mode = 2
 layout_mode = 2
 text = "Controls"
 
+[node name="HSeparator3" type="HSeparator" parent="UI/Controls/PanelContainer/MarginContainer/VBoxContainer"]
+layout_mode = 2
+
 [node name="Move" type="Label" parent="UI/Controls/PanelContainer/MarginContainer/VBoxContainer"]
 layout_mode = 2
 text = "Move: WASD"
@@ -112,6 +115,9 @@ text = "Add Target: Shift + LMB"
 layout_mode = 2
 text = "Gizmo: LMB"
 
+[node name="HSeparator2" type="HSeparator" parent="UI/Controls/PanelContainer/MarginContainer/VBoxContainer"]
+layout_mode = 2
+
 [node name="Snap" type="Label" parent="UI/Controls/PanelContainer/MarginContainer/VBoxContainer"]
 layout_mode = 2
 text = "Snap: CTRL"
@@ -123,6 +129,21 @@ text = "Local Space: T"
 [node name="CustomGizmo" type="Label" parent="UI/Controls/PanelContainer/MarginContainer/VBoxContainer"]
 layout_mode = 2
 text = "Custom Gizmo: G"
+
+[node name="HSeparator" type="HSeparator" parent="UI/Controls/PanelContainer/MarginContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="ToggleMove" type="Label" parent="UI/Controls/PanelContainer/MarginContainer/VBoxContainer"]
+layout_mode = 2
+text = "Toggle Move: 1"
+
+[node name="ToggleRotate" type="Label" parent="UI/Controls/PanelContainer/MarginContainer/VBoxContainer"]
+layout_mode = 2
+text = "Toggle Rotate: 2"
+
+[node name="ToggleScale" type="Label" parent="UI/Controls/PanelContainer/MarginContainer/VBoxContainer"]
+layout_mode = 2
+text = "Toggle Scale: 3"
 
 [node name="Message" type="Label" parent="UI"]
 offset_right = 40.0
