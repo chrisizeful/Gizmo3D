@@ -20,12 +20,37 @@ public partial class Gizmo3D : Node3D
     const float DEFAULT_FLOAT_STEP = 0.001f;
     const float MAX_Z = 1000000.0f;
 
+    /// <summary>
+    /// The width for the move arrows - Godot value is .065f.
+    /// </summary>
+    const float GIZMO_ARROW_WIDTH = 0.12f;
+    /// <summary>
+    /// The height of the move arrows.
+    /// </summary>
     const float GIZMO_ARROW_SIZE = 0.35f;
+    /// <summary>
+    /// Tolerance for interacting with rotation gizmo.
+    /// </summary>
     const float GIZMO_RING_HALF_WIDTH = 0.1f;
+    /// <summary>
+    /// The size of the move and scale plane gizmos.
+    /// </summary>
     const float GIZMO_PLANE_SIZE = .2f;
+    /// <summary>
+    /// Distance from center for plane gizmos.
+    /// </summary>
     const float GIZMO_PLANE_DST = 0.3f;
+    /// <summary>
+    /// The circle size for the rotation gizmo.
+    /// </summary>
     const float GIZMO_CIRCLE_SIZE = 1.1f;
+    /// <summary>
+    /// Distance from center for scale arrows.
+    /// </summary>
     const float GIZMO_SCALE_OFFSET = GIZMO_CIRCLE_SIZE - 0.3f;
+    /// <summary>
+    /// Distance from center for move arrows - Godot value is GIZMO_CIRCLE_SIZE + .3f.
+    /// </summary>
     const float GIZMO_ARROW_OFFSET = GIZMO_CIRCLE_SIZE + 0.15f;
 
     /// <summary>
@@ -196,6 +221,7 @@ public partial class Gizmo3D : Node3D
     public float ScaleSnap { get; set; } = .25f;
 
     ArrayMesh[] MoveGizmo = new ArrayMesh[3];
+    ArrayMesh[] MoveArrowGizmo = new ArrayMesh[3];
     ArrayMesh[] MovePlaneGizmo = new ArrayMesh[3];
     ArrayMesh[] RotateGizmo = new ArrayMesh[4];
     ArrayMesh[] ScaleGizmo = new ArrayMesh[3];
@@ -209,6 +235,7 @@ public partial class Gizmo3D : Node3D
     ShaderMaterial[] RotateGizmoColorHl = new ShaderMaterial[3];
 
     Rid[] MoveGizmoInstance = new Rid[3];
+    Rid[] MoveArrowGizmoInstance = new Rid[3];
     Rid[] MovePlaneGizmoInstance = new Rid[3];
     Rid[] RotateGizmoInstance = new Rid[4];
     Rid[] ScaleGizmoInstance = new Rid[3];
@@ -394,6 +421,7 @@ public partial class Gizmo3D : Node3D
         for (int i = 0; i < 3; i++)
         {
             FreeRid(MoveGizmoInstance[i]);
+            FreeRid(MoveArrowGizmoInstance[i]);
             FreeRid(MovePlaneGizmoInstance[i]);
             FreeRid(RotateGizmoInstance[i]);
             FreeRid(ScaleGizmoInstance[i]);
@@ -421,6 +449,14 @@ public partial class Gizmo3D : Node3D
             InstanceSetLayerMask(MoveGizmoInstance[i], Layers);
             InstanceGeometrySetFlag(MoveGizmoInstance[i], InstanceFlags.IgnoreOcclusionCulling, true);
             InstanceGeometrySetFlag(MoveGizmoInstance[i], InstanceFlags.UseBakedLight, false);
+
+            MoveArrowGizmoInstance[i] = InstanceCreate();
+            InstanceSetBase(MoveArrowGizmoInstance[i], MoveArrowGizmo[i].GetRid());
+            InstanceSetScenario(MoveArrowGizmoInstance[i], GetWorld3D().Scenario);
+            InstanceGeometrySetCastShadowsSetting(MoveArrowGizmoInstance[i], ShadowCastingSetting.Off);
+            InstanceSetLayerMask(MoveArrowGizmoInstance[i], Layers);
+            InstanceGeometrySetFlag(MoveArrowGizmoInstance[i], InstanceFlags.IgnoreOcclusionCulling, true);
+            InstanceGeometrySetFlag(MoveArrowGizmoInstance[i], InstanceFlags.UseBakedLight, false);
 
             MovePlaneGizmoInstance[i] = InstanceCreate();
             InstanceSetBase(MovePlaneGizmoInstance[i], MovePlaneGizmo[i].GetRid());
@@ -475,7 +511,6 @@ public partial class Gizmo3D : Node3D
 
     void InitIndicators()
     {
-#region Move
         // Inverted zxy.
         Vector3 ivec = new(0, 0, -1);
         Vector3 nivec = new(-1, -1, 0);
@@ -485,6 +520,7 @@ public partial class Gizmo3D : Node3D
         for (int i = 0; i < 3; i++)
         {
             MoveGizmo[i] = new ArrayMesh();
+            MoveArrowGizmo[i] = new ArrayMesh();
             MovePlaneGizmo[i] = new ArrayMesh();
             RotateGizmo[i] = new ArrayMesh();
             ScaleGizmo[i] = new ArrayMesh();
@@ -502,44 +538,25 @@ public partial class Gizmo3D : Node3D
             GizmoColor[i] = mat;
             GizmoColorHl[i] = (StandardMaterial3D) mat.Duplicate();
 #region Translate
-            SurfaceTool surfTool = new();
-            surfTool.Begin(Mesh.PrimitiveType.Triangles);
-
-            // Arrow profile
-            int arrowPoints = 5;
-            Vector3[] arrow = {
+            SurfaceTool surfTool = CreateArrow([
                 nivec * 0.0f + ivec * GIZMO_ARROW_OFFSET,
                 nivec * 0.01f + ivec * GIZMO_ARROW_OFFSET,
                 nivec * 0.01f + ivec * GIZMO_ARROW_OFFSET,
-                nivec * 0.12f + ivec * GIZMO_ARROW_OFFSET,
+                nivec * GIZMO_ARROW_WIDTH + ivec * GIZMO_ARROW_OFFSET,
                 nivec * 0.0f + ivec * (GIZMO_ARROW_OFFSET + GIZMO_ARROW_SIZE)
-            };
-
-            int arrowSides = 16;
-            float arrowSidesStep = Mathf.Tau / arrowSides;
-            for (int k = 0; k < arrowSides; k++)
-            {
-                Basis maa = new(ivec, k * arrowSidesStep);
-                Basis mbb = new(ivec, (k + 1) * arrowSidesStep);
-                for (int j = 0; j < arrowPoints - 1; j++)
-                {
-                    Vector3[] apoints = {
-                        maa * arrow[j],
-                        mbb * arrow[j],
-                        mbb * arrow[j + 1],
-                        maa * arrow[j + 1]
-                    };
-                    surfTool.AddVertex(apoints[0]);
-                    surfTool.AddVertex(apoints[1]);
-                    surfTool.AddVertex(apoints[2]);
-
-                    surfTool.AddVertex(apoints[0]);
-                    surfTool.AddVertex(apoints[1]);
-                    surfTool.AddVertex(apoints[2]);
-                }
-            }
+            ], ivec, 5, 16);
             surfTool.SetMaterial(mat);
             surfTool.Commit(MoveGizmo[i]);
+
+            surfTool = CreateArrow([
+                nivec * 0.0f + ivec * 0.0f,
+                nivec * 0.01f + ivec * 0.0f,
+                nivec * 0.01f + ivec * GIZMO_ARROW_OFFSET,
+                nivec * GIZMO_ARROW_WIDTH + ivec * GIZMO_ARROW_OFFSET,
+                nivec * 0.0f + ivec * (GIZMO_ARROW_OFFSET + GIZMO_ARROW_SIZE)
+            ], ivec, 5, 16);
+            surfTool.SetMaterial(mat);
+            surfTool.Commit(MoveArrowGizmo[i]);
 #endregion
 #region Plane Translation
             surfTool = new SurfaceTool();
@@ -620,7 +637,7 @@ public partial class Gizmo3D : Node3D
                     surfTool.AddIndex(currentRing + nextSegment);
                 }
             }
-#endregion
+            
             Shader rotateShader = new()
             {
                 Code = @"
@@ -714,50 +731,21 @@ void fragment() {
                     RotateGizmo[3].AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
                     RotateGizmo[3].SurfaceSetMaterial(0, borderMat);
                 }
+#endregion
 #region Scale
-                surfTool = new();
-                surfTool.Begin(Mesh.PrimitiveType.Triangles);
-
-                // Cube arrow profile
-                arrowPoints = 6;
-                arrow = [
+                surfTool = CreateArrow([
                     nivec * 0.0f + ivec * 0.0f,
                     nivec * 0.01f + ivec * 0.0f,
                     nivec * 0.01f + ivec * 1.0f * GIZMO_SCALE_OFFSET,
                     nivec * 0.07f + ivec * 1.0f * GIZMO_SCALE_OFFSET,
                     nivec * 0.07f + ivec * 1.2f * GIZMO_SCALE_OFFSET,
                     nivec * 0.0f + ivec * 1.2f * GIZMO_SCALE_OFFSET
-                ];
-
-                arrowSides = 4;
-                arrowSidesStep = Mathf.Tau / arrowSides;
-                for (int k = 0; k < 4; k++)
-                {
-                    Basis maa = new(ivec, k * arrowSidesStep);
-                    Basis mbb = new (ivec, (k + 1) * arrowSidesStep);
-                    for (int j = 0; j < arrowPoints - 1; j++)
-                    {
-                        Vector3[] apoints = {
-                            maa * arrow[j],
-                            mbb * arrow[j],
-                            mbb * arrow[j + 1],
-                            maa * arrow[j + 1]
-                        };
-                        surfTool.AddVertex(apoints[0]);
-                        surfTool.AddVertex(apoints[1]);
-                        surfTool.AddVertex(apoints[2]);
-
-                        surfTool.AddVertex(apoints[0]);
-                        surfTool.AddVertex(apoints[2]);
-                        surfTool.AddVertex(apoints[3]);
-                    }
-                }
-
+                ], ivec, 6, 4);
                 surfTool.SetMaterial(mat);
                 surfTool.Commit(ScaleGizmo[i]);
 #endregion
 #region Plane Scale
-                surfTool = new SurfaceTool();
+                surfTool = new();
                 surfTool.Begin(Mesh.PrimitiveType.Triangles);
 
                 vec = ivec2 - ivec3;
@@ -812,8 +800,38 @@ void fragment() {
                 surfTool.Commit(AxisGizmo[i]);
         }
 #endregion
-#endregion
 	    GenerateSelectionBoxes();
+    }
+
+    SurfaceTool CreateArrow(Vector3[] arrow, Vector3 ivec, int arrowPoints, int arrowSides)
+    {
+        SurfaceTool surfTool = new();
+        surfTool.Begin(Mesh.PrimitiveType.Triangles);
+
+        // Arrow profile
+        float arrowSidesStep = Mathf.Tau / arrowSides;
+        for (int k = 0; k < arrowSides; k++)
+        {
+            Basis maa = new(ivec, k * arrowSidesStep);
+            Basis mbb = new(ivec, (k + 1) * arrowSidesStep);
+            for (int j = 0; j < arrowPoints - 1; j++)
+            {
+                Vector3[] apoints = {
+                    maa * arrow[j],
+                    mbb * arrow[j],
+                    mbb * arrow[j + 1],
+                    maa * arrow[j + 1]
+                };
+                surfTool.AddVertex(apoints[0]);
+                surfTool.AddVertex(apoints[1]);
+                surfTool.AddVertex(apoints[2]);
+
+                surfTool.AddVertex(apoints[0]);
+                surfTool.AddVertex(apoints[2]);
+                surfTool.AddVertex(apoints[3]);
+            }
+        }
+        return surfTool;
     }
 
     void SetColors()
@@ -879,7 +897,9 @@ void fragment() {
             axisAngle.Basis *= Basis.FromScale(scale);
             axisAngle.Origin = xform.Origin;
             InstanceSetTransform(MoveGizmoInstance[i], axisAngle);
-            InstanceSetVisible(MoveGizmoInstance[i], (Mode & ToolMode.Move) == ToolMode.Move);
+            InstanceSetVisible(MoveGizmoInstance[i], (Mode & ToolMode.Move) == ToolMode.Move && (Mode & ToolMode.Scale) == ToolMode.Scale);
+            InstanceSetTransform(MoveArrowGizmoInstance[i], axisAngle);
+            InstanceSetVisible(MoveArrowGizmoInstance[i], (Mode & ToolMode.Move) == ToolMode.Move && (Mode & ToolMode.Scale) == 0);
             InstanceSetTransform(MovePlaneGizmoInstance[i], axisAngle);
             InstanceSetVisible(MovePlaneGizmoInstance[i], (Mode & ToolMode.Move) == ToolMode.Move);
             InstanceSetTransform(RotateGizmoInstance[i], axisAngle);
@@ -933,6 +953,7 @@ void fragment() {
         for (int i = 0; i < 3; i++)
         {
             InstanceSetVisible(MoveGizmoInstance[i], visible);
+            InstanceSetVisible(MoveArrowGizmoInstance[i], visible);
             InstanceSetVisible(MovePlaneGizmoInstance[i], visible);
             InstanceSetVisible(RotateGizmoInstance[i], visible);
             InstanceSetVisible(ScaleGizmoInstance[i], visible);
@@ -997,6 +1018,7 @@ void fragment() {
         for (int i = 0; i < 3; i++)
         {
             MoveGizmo[i].SurfaceSetMaterial(0, i == axis ? GizmoColorHl[i] : GizmoColor[i]);
+            MoveArrowGizmo[i].SurfaceSetMaterial(0, i == axis ? GizmoColorHl[i] : GizmoColor[i]);
             MovePlaneGizmo[i].SurfaceSetMaterial(0, (i + 6) == axis ? PlaneGizmoColorHl[i] : PlaneGizmoColor[i]);
             RotateGizmo[i].SurfaceSetMaterial(0, (i + 3) == axis ? RotateGizmoColorHl[i] : RotateGizmoColor[i]);
             ScaleGizmo[i].SurfaceSetMaterial(0, (i + 9) == axis ? GizmoColorHl[i] : GizmoColor[i]);

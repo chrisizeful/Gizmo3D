@@ -11,12 +11,21 @@ extends Node3D
 const DEFAULT_FLOAT_STEP := 0.001
 const MAX_Z := 1000000.0
 
+## The width for the move arrows - Godot value is .065f.
+const GIZMO_ARROW_WIDTH = .12
+## The height of the move arrows.
 const GIZMO_ARROW_SIZE := 0.35
+## Tolerance for interacting with rotation gizmo.
 const GIZMO_RING_HALF_WIDTH := .1
+## The size of the move and scale plane gizmos.
 const GIZMO_PLANE_SIZE := .2
+## Distance from center for plane gizmos.
 const GIZMO_PLANE_DST := .3
+## The circle size for the rotation gizmo.
 const GIZMO_CIRCLE_SIZE := 1.1
+## Distance from center for scale arrows.
 const GIZMO_SCALE_OFFSET := GIZMO_CIRCLE_SIZE - .3
+## Distance from center for move arrows - Godot value is GIZMO_CIRCLE_SIZE + .3f.
 const GIZMO_ARROW_OFFSET := GIZMO_CIRCLE_SIZE + .15
 
 ## Used to limit which transformations are being edited.
@@ -146,6 +155,7 @@ var translate_snap := 1.0
 var scale_snap := .25
 
 var _move_gizmo : Array[ArrayMesh] = []
+var _move_arrow_gizmo : Array[ArrayMesh] = []
 var _move_plane_gizmo : Array[ArrayMesh] = []
 var _rotate_gizmo : Array[ArrayMesh] = []
 var _scale_gizmo : Array[ArrayMesh] = []
@@ -159,6 +169,7 @@ var _plane_gizmo_color_hl : Array[StandardMaterial3D] = []
 var _rotate_gizmo_color_hl : Array[ShaderMaterial] = []
 
 var _move_gizmo_instance : Array[RID] = []
+var _move_arrow_gizmo_instance : Array[RID] = []
 var _move_plane_gizmo_instance : Array[RID] = []
 var _rotate_gizmo_instance : Array[RID] = []
 var _scale_gizmo_instance : Array[RID] = []
@@ -187,6 +198,7 @@ signal transform_end(mode : TransformMode)
 
 func _ready() -> void:
 	_move_gizmo.resize(3)
+	_move_arrow_gizmo.resize(3)
 	_move_plane_gizmo.resize(3)
 	_rotate_gizmo.resize(4)
 	_scale_gizmo.resize(3)
@@ -200,6 +212,7 @@ func _ready() -> void:
 	_rotate_gizmo_color_hl.resize(4)
 	
 	_move_gizmo_instance.resize(3)
+	_move_arrow_gizmo_instance.resize(3)
 	_move_plane_gizmo_instance.resize(3)
 	_rotate_gizmo_instance.resize(4)
 	_scale_gizmo_instance.resize(3)
@@ -288,6 +301,7 @@ func _exit_tree() -> void:
 	get_tree().root.focus_exited.disconnect(_on_focus_exited)
 	for i in range(3):
 		RenderingServer.free_rid(_move_gizmo_instance[i])
+		RenderingServer.free_rid(_move_arrow_gizmo_instance[i])
 		RenderingServer.free_rid(_move_plane_gizmo_instance[i])
 		RenderingServer.free_rid(_rotate_gizmo_instance[i])
 		RenderingServer.free_rid(_scale_gizmo_instance[i])
@@ -310,6 +324,14 @@ func _init_gizmo_instance() -> void:
 		RenderingServer.instance_set_layer_mask(_move_gizmo_instance[i], layers)
 		RenderingServer.instance_geometry_set_flag(_move_gizmo_instance[i], RenderingServer.InstanceFlags.INSTANCE_FLAG_IGNORE_OCCLUSION_CULLING, true)
 		RenderingServer.instance_geometry_set_flag(_move_gizmo_instance[i], RenderingServer.InstanceFlags.INSTANCE_FLAG_USE_BAKED_LIGHT, false)
+		
+		_move_arrow_gizmo_instance[i] = RenderingServer.instance_create()
+		RenderingServer.instance_set_base(_move_arrow_gizmo_instance[i], _move_arrow_gizmo[i].get_rid())
+		RenderingServer.instance_set_scenario(_move_arrow_gizmo_instance[i], get_world_3d().scenario)
+		RenderingServer.instance_geometry_set_cast_shadows_setting(_move_arrow_gizmo_instance[i], RenderingServer.ShadowCastingSetting.SHADOW_CASTING_SETTING_OFF)
+		RenderingServer.instance_set_layer_mask(_move_arrow_gizmo_instance[i], layers)
+		RenderingServer.instance_geometry_set_flag(_move_arrow_gizmo_instance[i], RenderingServer.InstanceFlags.INSTANCE_FLAG_IGNORE_OCCLUSION_CULLING, true)
+		RenderingServer.instance_geometry_set_flag(_move_arrow_gizmo_instance[i], RenderingServer.InstanceFlags.INSTANCE_FLAG_USE_BAKED_LIGHT, false)
 		
 		_move_plane_gizmo_instance[i] = RenderingServer.instance_create()
 		RenderingServer.instance_set_base(_move_plane_gizmo_instance[i], _move_plane_gizmo[i].get_rid())
@@ -368,6 +390,7 @@ func _init_indicators() -> void:
 	
 	for i in range(3):
 		_move_gizmo[i] = ArrayMesh.new()
+		_move_arrow_gizmo[i] = ArrayMesh.new()
 		_move_plane_gizmo[i] = ArrayMesh.new()
 		_rotate_gizmo[i] = ArrayMesh.new()
 		_scale_gizmo[i] = ArrayMesh.new()
@@ -383,43 +406,28 @@ func _init_indicators() -> void:
 		_gizmo_color[i] = mat
 		_gizmo_color_hl[i] = mat.duplicate()
 		
-		# Translate
-		var surf_tool = SurfaceTool.new()
-		surf_tool.begin(Mesh.PRIMITIVE_TRIANGLES)
-		
-		# Arrow profile
-		var arrow_points := 5
-		var arrow := [
+#region Translate
+		var surf_tool := _create_arrow([
 			nivec * 0.0 + ivec * GIZMO_ARROW_OFFSET,
 			nivec * 0.01 + ivec * GIZMO_ARROW_OFFSET,
 			nivec * 0.01 + ivec * GIZMO_ARROW_OFFSET,
-			nivec * 0.12 + ivec * GIZMO_ARROW_OFFSET,
+			nivec * GIZMO_ARROW_WIDTH + ivec * GIZMO_ARROW_OFFSET,
 			nivec * 0.0 + ivec * (GIZMO_ARROW_OFFSET + GIZMO_ARROW_SIZE)
-		]
-		
-		var arrow_sides := 16
-		var arrow_sides_step := TAU / arrow_sides
-		for k in range(arrow_sides):
-			var maa := Basis(ivec, k * arrow_sides_step)
-			var mbb := Basis(ivec, (k + 1) * arrow_sides_step)
-			for j in range(arrow_points - 1):
-				var apoints := [
-					maa * arrow[j],
-					mbb * arrow[j],
-					mbb * arrow[j + 1],
-					maa * arrow[j + 1]
-				]
-				surf_tool.add_vertex(apoints[0])
-				surf_tool.add_vertex(apoints[1])
-				surf_tool.add_vertex(apoints[2])
-				
-				surf_tool.add_vertex(apoints[0])
-				surf_tool.add_vertex(apoints[1])
-				surf_tool.add_vertex(apoints[2])
+		], ivec, 5, 16)
 		surf_tool.set_material(mat)
 		surf_tool.commit(_move_gizmo[i])
 		
-		# Plane translation
+		surf_tool = _create_arrow([
+			nivec * 0.0 + ivec * 0.0,
+			nivec * 0.01 + ivec * 0.0,
+			nivec * 0.01 + ivec * GIZMO_ARROW_OFFSET,
+			nivec * GIZMO_ARROW_WIDTH + ivec * GIZMO_ARROW_OFFSET,
+			nivec * 0.0 + ivec * (GIZMO_ARROW_OFFSET + GIZMO_ARROW_SIZE)
+		], ivec, 5, 16)
+		surf_tool.set_material(mat)
+		surf_tool.commit(_move_arrow_gizmo[i])
+#endregion
+#region Plane translation
 		surf_tool = SurfaceTool.new()
 		surf_tool.begin(Mesh.PRIMITIVE_TRIANGLES)
 		
@@ -456,8 +464,8 @@ func _init_indicators() -> void:
 		surf_tool.set_material(plane_mat)
 		surf_tool.commit(_move_plane_gizmo[i])
 		_plane_gizmo_color_hl[i] = plane_mat.duplicate()
-		
-		# Rotation
+#endregion
+#region Rotation
 		surf_tool = SurfaceTool.new()
 		surf_tool.begin(Mesh.PRIMITIVE_TRIANGLES)
 		
@@ -573,45 +581,20 @@ void fragment() {
 			_rotate_gizmo[3] = ArrayMesh.new()
 			_rotate_gizmo[3].add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
 			_rotate_gizmo[3].surface_set_material(0, border_mat)
-		
-		# Scale
-		surf_tool = SurfaceTool.new()
-		surf_tool.begin(Mesh.PRIMITIVE_TRIANGLES)
-		
-		# Cube arrow profile
-		arrow_points = 6
-		arrow = [
+#endregion
+#region Scale
+		surf_tool = _create_arrow([
 			nivec * 0.0 + ivec * 0.0,
 			nivec * 0.01 + ivec * 0.0,
 			nivec * 0.01 + ivec * 1.0 * GIZMO_SCALE_OFFSET,
 			nivec * 0.07 + ivec * 1.0 * GIZMO_SCALE_OFFSET,
 			nivec * 0.07 + ivec * 1.2 * GIZMO_SCALE_OFFSET,
 			nivec * 0.0 + ivec * 1.2 * GIZMO_SCALE_OFFSET
-		]
-		
-		arrow_sides = 4
-		arrow_sides_step = TAU / arrow_sides
-		for k in range(4):
-			var maa := Basis(ivec, k * arrow_sides_step)
-			var mbb := Basis(ivec, (k + 1) * arrow_sides_step)
-			for j in range(arrow_points - 1):
-				var apoints := [
-					maa * arrow[j],
-					mbb * arrow[j],
-					mbb * arrow[j + 1],
-					maa * arrow[j + 1]
-				]
-				surf_tool.add_vertex(apoints[0])
-				surf_tool.add_vertex(apoints[1])
-				surf_tool.add_vertex(apoints[2])
-
-				surf_tool.add_vertex(apoints[0])
-				surf_tool.add_vertex(apoints[2])
-				surf_tool.add_vertex(apoints[3])
+		], ivec, 6, 4)
 		surf_tool.set_material(mat)
 		surf_tool.commit(_scale_gizmo[i])
-		
-		# Plane scale
+#endregion
+#region Plane scale
 		surf_tool = SurfaceTool.new()
 		surf_tool.begin(Mesh.PRIMITIVE_TRIANGLES)
 		
@@ -650,8 +633,8 @@ void fragment() {
 		surf_tool.commit(_scale_plane_gizmo[i])
 		
 		_plane_gizmo_color_hl[i] = plane_mat.duplicate()
-		
-		# Lines to visualize transforms locked to an axis/plane
+#endregion
+#region Lines to visualize transforms locked to an axis/plane
 		surf_tool = SurfaceTool.new()
 		surf_tool.begin(Mesh.PRIMITIVE_LINE_STRIP)
 		
@@ -663,7 +646,33 @@ void fragment() {
 		surf_tool.add_vertex(vec * 1048576)
 		surf_tool.set_material(_gizmo_color_hl[i])
 		surf_tool.commit(_axis_gizmo[i])
+#endregion
 	_generate_selection_boxes()
+
+func _create_arrow(arrow : Array[Vector3], ivec : Vector3, arrow_points : int, arrow_sides : int) -> SurfaceTool:
+	var surf_tool = SurfaceTool.new()
+	surf_tool.begin(Mesh.PRIMITIVE_TRIANGLES)
+		
+	# Arrow profile	
+	var arrow_sides_step := TAU / arrow_sides
+	for k in range(arrow_sides):
+		var maa := Basis(ivec, k * arrow_sides_step)
+		var mbb := Basis(ivec, (k + 1) * arrow_sides_step)
+		for j in range(arrow_points - 1):
+			var apoints := [
+				maa * arrow[j],
+				mbb * arrow[j],
+				mbb * arrow[j + 1],
+				maa * arrow[j + 1]
+			]
+			surf_tool.add_vertex(apoints[0])
+			surf_tool.add_vertex(apoints[1])
+			surf_tool.add_vertex(apoints[2])
+			
+			surf_tool.add_vertex(apoints[0])
+			surf_tool.add_vertex(apoints[2])
+			surf_tool.add_vertex(apoints[3])
+	return surf_tool
 
 func _set_colors() -> void:
 	for i in range(3):
@@ -716,7 +725,9 @@ func _update_transform_gizmo_view() -> void:
 		axis_angle.basis *= Basis.from_scale(scale)
 		axis_angle.origin = xform.origin
 		RenderingServer.instance_set_transform(_move_gizmo_instance[i], axis_angle)
-		RenderingServer.instance_set_visible(_move_gizmo_instance[i], mode & ToolMode.MOVE)
+		RenderingServer.instance_set_visible(_move_gizmo_instance[i], mode & ToolMode.MOVE and mode & ToolMode.SCALE)
+		RenderingServer.instance_set_transform(_move_arrow_gizmo_instance[i], axis_angle)
+		RenderingServer.instance_set_visible(_move_arrow_gizmo_instance[i], mode & ToolMode.MOVE and not mode & ToolMode.SCALE)
 		RenderingServer.instance_set_transform(_move_plane_gizmo_instance[i], axis_angle)
 		RenderingServer.instance_set_visible(_move_plane_gizmo_instance[i], mode & ToolMode.MOVE)
 		RenderingServer.instance_set_transform(_rotate_gizmo_instance[i], axis_angle)
@@ -765,6 +776,7 @@ func _update_transform_gizmo_view() -> void:
 func _set_visibility(visible : bool) -> void:
 	for i in range(3):
 		RenderingServer.instance_set_visible(_move_gizmo_instance[i], visible)
+		RenderingServer.instance_set_visible(_move_arrow_gizmo_instance[i], visible)
 		RenderingServer.instance_set_visible(_move_plane_gizmo_instance[i], visible)
 		RenderingServer.instance_set_visible(_rotate_gizmo_instance[i], visible)
 		RenderingServer.instance_set_visible(_scale_gizmo_instance[i], visible)
@@ -818,8 +830,10 @@ func _select_gizmo_highlight_axis(axis : int) -> void:
 	for i in range(3):
 		if i == axis:
 			_move_gizmo[i].surface_set_material(0, _gizmo_color_hl[i])
+			_move_arrow_gizmo[i].surface_set_material(0, _gizmo_color_hl[i])
 		else:
 			_move_gizmo[i].surface_set_material(0, _gizmo_color[i])
+			_move_arrow_gizmo[i].surface_set_material(0, _gizmo_color[i])
 		if i + 6 == axis:
 			_move_plane_gizmo[i].surface_set_material(0, _plane_gizmo_color_hl[i])
 		else:
