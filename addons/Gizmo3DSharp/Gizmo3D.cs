@@ -158,8 +158,7 @@ public partial class Gizmo3D : Node3D
         }
     }
 
-    Color[] colors =
-    [
+    Color[] colors = [
         new(0.96f, 0.20f, 0.32f),
         new(0.53f, 0.84f, 0.01f),
         new(0.16f, 0.55f, 0.96f)
