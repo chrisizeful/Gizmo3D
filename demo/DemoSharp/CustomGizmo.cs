@@ -26,12 +26,16 @@ public partial class CustomGizmo : Gizmo3D
     }
     
     /// <summary>
-    /// Example of overriding scaling to not allow the user to scale more than
-    /// 2 units in any direction at one time.
+    /// Example of overriding scaling to maintain ratio on all axes.
     /// </summary>
     protected override Vector3 EditScale(Vector3 scale)
     {
-        return scale.Clamp(-2, 2);
+        // Find the largest value on any axis being scaled and use that for all axes.
+        float max = 0;
+        for (int i = 0; i < 3; i++)
+            if (scale[i] != 0 && Mathf.Abs(scale[i]) > max)
+                max = scale[i];
+        return new(max, max, max);
     }
     
     /// <summary>
