@@ -248,7 +248,7 @@ func get_rotation_snap():
 		snap /= 3.0
 	return snap
 
-### Get the current translate snap value.
+### Get the current scale snap value.
 ### https://github.com/godotengine/godot/blob/65eb6643522abbe8ebce6428fe082167a7df14f9/editor/scene/3d/node_3d_editor_plugin.cpp#L9951
 func get_scale_snap():
 	var snap = scale_snap
