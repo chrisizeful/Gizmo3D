@@ -59,7 +59,10 @@ var layers: int:
 
 ## The nodes this gizmo will apply transformations to.
 var _selections : Dictionary[Node3D, SelectedItem]
+## Whether or not transformations will be snapped to rotate_snap, scale_snap, and/or translate_snap.
 var _snapping : bool
+## Shift modifier for snapping at lower intervals.
+var _shift_snap : bool
 ## Whether or not transformations will be snapped to [member rotate_snap], [member scale_snap], and/or [member translate_snap].
 var snapping: bool:
 	get:
@@ -229,12 +232,39 @@ func _ready() -> void:
 	colors = _colors
 	selection_box_color = _selection_box_color
 
+### Get the current translation snap value.
+### https://github.com/godotengine/godot/blob/65eb6643522abbe8ebce6428fe082167a7df14f9/editor/scene/3d/node_3d_editor_plugin.cpp#L9935
+func get_translate_snap():
+	var snap = translate_snap
+	if _shift_snap:
+		snap /= 10.0
+	return snap
+
+### Get the current rotation snap value.
+### https://github.com/godotengine/godot/blob/65eb6643522abbe8ebce6428fe082167a7df14f9/editor/scene/3d/node_3d_editor_plugin.cpp#L9943
+func get_rotation_snap():
+	var snap = rotate_snap
+	if _shift_snap:
+		snap /= 3.0
+	return snap
+
+### Get the current translate snap value.
+### https://github.com/godotengine/godot/blob/65eb6643522abbe8ebce6428fe082167a7df14f9/editor/scene/3d/node_3d_editor_plugin.cpp#L9951
+func get_scale_snap():
+	var snap = scale_snap
+	if _shift_snap:
+		snap /= 2.0
+	return snap
+
 func _unhandled_input(event : InputEvent) -> void:
 	_hovering = false
 	if !visible:
 		_editing = false
-	elif event is InputEventKey and event.keycode == KEY_CTRL:
-		_snapping = event.pressed
+	elif event is InputEventKey:
+		if event.keycode == KEY_CTRL:
+			_snapping = event.pressed
+		elif event.keycode == KEY_SHIFT:
+			_shift_snap = event.pressed
 	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		if !event.pressed:
 			_editing = false
@@ -314,6 +344,7 @@ func _on_focus_exited() -> void:
 	_editing = false
 	_hovering = false
 	_snapping = false
+	_shift_snap = false;
 
 func _init_gizmo_instance() -> void:
 	for i in range(3):
@@ -1182,7 +1213,7 @@ func _update_transform(shift : bool) -> Vector3:
 			var slocal_coords := use_local_space and _edit.plane != TransformPlane.VIEW
 			
 			if snapping:
-				snap = scale_snap
+				snap = get_scale_snap()
 			if slocal_coords:
 				smotion = _edit.original.basis.inverse() * smotion
 			
@@ -1239,7 +1270,7 @@ func _update_transform(shift : bool) -> Vector3:
 			var tlocal_coords := use_local_space and _edit.plane != TransformPlane.VIEW
 			
 			if snapping:
-				snap = translate_snap
+				snap = get_translate_snap()
 			if tlocal_coords:
 				tmotion = transform.basis.inverse() * tmotion
 			
@@ -1304,7 +1335,7 @@ func _update_transform(shift : bool) -> Vector3:
 				angle = click_axis.signed_angle_to(current_axis, global_axis)
 			
 			if snapping:
-				snap = rotate_snap
+				snap = get_rotation_snap()
 			
 			var rlocal_coords = use_local_space and _edit.plane != TransformPlane.VIEW # Disable local transformation for TRANSFORM_VIEW
 			var compute_axis := global_axis

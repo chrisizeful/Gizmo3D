@@ -101,6 +101,10 @@ public partial class Gizmo3D : Node3D
     /// </summary>
     public bool Snapping { get; private set; }
     /// <summary>
+    /// Shift modifier for snapping at lower intervals.
+    /// </summary>
+    public bool ShiftSnap { get; private set; }
+    /// <summary>
     /// A displayable message describing the current transformation being applied, for example "Rotating: {60.000} degrees".
     /// </summary>
     public string Message { get; private set; }
@@ -301,6 +305,42 @@ public partial class Gizmo3D : Node3D
         VisibilityChanged += () => SetVisibility(Visible);
     }
 
+    /// <summary>
+    /// Get the current translation snap value.
+    /// https://github.com/godotengine/godot/blob/65eb6643522abbe8ebce6428fe082167a7df14f9/editor/scene/3d/node_3d_editor_plugin.cpp#L9935
+    /// </summary>
+    public float GetTranslateSnap()
+    {
+        float snap = TranslateSnap;
+        if (ShiftSnap)
+            snap /= 10.0f;
+        return snap;
+    }
+
+    /// <summary>
+    /// Get the current rotation snap value.
+    /// https://github.com/godotengine/godot/blob/65eb6643522abbe8ebce6428fe082167a7df14f9/editor/scene/3d/node_3d_editor_plugin.cpp#L9943
+    /// </summary>
+    public float GetRotationSnap()
+    {
+        float snap = RotateSnap;
+        if (ShiftSnap)
+            snap /= 3.0f;
+        return snap;
+    }
+
+    /// <summary>
+    /// Get the current scale snap value.
+    /// https://github.com/godotengine/godot/blob/65eb6643522abbe8ebce6428fe082167a7df14f9/editor/scene/3d/node_3d_editor_plugin.cpp#L9951
+    /// </summary>
+    public float GetScaleSnap()
+    {
+        float snap = ScaleSnap;
+        if (ShiftSnap)
+            snap /= 2.0f;
+        return snap;
+    }
+
     public override void _UnhandledInput(InputEvent @event)
     {
         Hovering = false;
@@ -308,9 +348,12 @@ public partial class Gizmo3D : Node3D
         {
             Editing = false;
         }
-        else if (@event is InputEventKey key && key.Keycode == Key.Ctrl)
+        else if (@event is InputEventKey key)
         {
-            Snapping = key.Pressed;
+            if (key.Keycode == Key.Ctrl)
+                Snapping = key.Pressed;
+            else if (key.Keycode == Key.Shift)
+                ShiftSnap = key.Pressed;
         }
         else if (@event is InputEventMouseButton button && button.ButtonIndex == MouseButton.Left)
         {
@@ -434,7 +477,7 @@ public partial class Gizmo3D : Node3D
 
     void OnFocusExited()
     {
-        Editing = Hovering = Snapping = false;
+        Editing = Hovering = Snapping = ShiftSnap = false;
     }
 
     void InitGizmoInstance()
@@ -1455,7 +1498,7 @@ void fragment() {
                 bool slocalCoords = UseLocalSpace && Edit.Plane != TransformPlane.View;
 
                 if (Snapping)
-                    snap = ScaleSnap;
+                    snap = GetScaleSnap();
                 if (slocalCoords)
                     smotion = Edit.Original.Basis.Inverse() * smotion;
                 
@@ -1519,7 +1562,7 @@ void fragment() {
                 bool tlocalCoords = UseLocalSpace && Edit.Plane != TransformPlane.View;
 
                 if (Snapping)
-                    snap = TranslateSnap;
+                    snap = GetTranslateSnap();
                 if (tlocalCoords)
                     tmotion = Transform.Basis.Inverse() * tmotion;
                 
@@ -1600,7 +1643,7 @@ void fragment() {
                 }
 
                 if (Snapping)
-                    snap = RotateSnap;
+                    snap = GetRotationSnap();
 
                 bool rlocalCoords = UseLocalSpace && Edit.Plane != TransformPlane.View; // Disable local transformation for TRANSFORM_VIEW
                 Vector3 computeAxis = rlocalCoords ? localAxis : globalAxis;
