@@ -145,6 +145,11 @@ public partial class Gizmo3D : Node3D
     /// </summary>
     [Export]
     public bool ShowSelectionBox { get; set; } = true;
+    /// <summary>
+    /// Whether to show the line from the gizmo origin to the cursor when rotating.
+    /// </summary>
+    [Export]
+    public bool ShowRotationLine { get; set; } = true;
 
     float opacity = .9f;
     /// <summary>
@@ -251,6 +256,8 @@ public partial class Gizmo3D : Node3D
     EditData Edit = new();
     float GizmoScale = 1.0f;
 
+    Control surface;
+
     [Flags]
     public enum ToolMode { Move = 1, Rotate = 2, Scale = 4, All = 7 };
     public enum TransformMode { None, Rotate, Translate, Scale };
@@ -261,6 +268,7 @@ public partial class Gizmo3D : Node3D
     /// </summary>
     struct EditData
     {
+        public bool ShowRotationLine;
         public Transform3D Original;
         public TransformMode Mode;
         public TransformPlane Plane;
@@ -303,6 +311,44 @@ public partial class Gizmo3D : Node3D
         InitGizmoInstance();
         UpdateTransformGizmo();
         VisibilityChanged += () => SetVisibility(Visible);
+        surface = new();
+        AddChild(surface);
+    }
+
+    /// <summary>
+    /// 2D drawing using the RenderingServer and surface Control.
+    /// https://github.com/godotengine/godot/blob/65eb6643522abbe8ebce6428fe082167a7df14f9/editor/scene/3d/node_3d_editor_plugin.cpp#L3436
+    /// </summary>
+    void Draw()
+    {
+        Rid ci = surface.GetCanvasItem();
+        CanvasItemClear(ci);
+        if (Edit.Mode == TransformMode.Rotate && Edit.ShowRotationLine && ShowRotationLine)
+        {
+            Vector2 center = PointToScreen(Edit.Center);
+
+            Color handleColor = default;
+            switch (Edit.Plane)
+            {
+                case TransformPlane.X:
+                    handleColor = colors[0];
+                    break;
+                case TransformPlane.Y:
+                    handleColor = colors[1];
+                    break;
+                case TransformPlane.Z:
+                    handleColor = colors[2];
+                    break;
+            }
+            handleColor = Color.FromHsv(handleColor.H, 0.25f, 1.0f, 1);
+
+            CanvasItemAddLine(
+                ci,
+                Edit.MousePos,
+                center,
+                handleColor,
+                2);
+        }
     }
 
     /// <summary>
@@ -361,6 +407,7 @@ public partial class Gizmo3D : Node3D
             {
                 Editing = false;
                 UpdateTransformGizmo();
+                Edit.Mode = TransformMode.None;
                 return;
             }
             Edit.MousePos = button.Position;
@@ -455,6 +502,7 @@ public partial class Gizmo3D : Node3D
     public override void _Process(double delta)
     {
         UpdateTransformGizmo();
+        Draw();
     }
 
     public override void _ExitTree()
@@ -1630,6 +1678,7 @@ void fragment() {
                 float angle;
                 if (axisIsOrthogonal)
                 {
+                    Edit.ShowRotationLine = false;
                     Vector3 projectionAxis = rplane.Normal.Cross(globalAxis);
                     Vector3 delta = rintersection.Value - rclick.Value;
                     float projection = delta.Dot(projectionAxis);
@@ -1637,6 +1686,7 @@ void fragment() {
                 }
                 else
                 {
+                    Edit.ShowRotationLine = true;
                     Vector3 clickAxis = (rclick.Value - Edit.Center).Normalized();
                     Vector3 currentAxis = (rintersection.Value - Edit.Center).Normalized();
                     angle = clickAxis.SignedAngleTo(currentAxis, globalAxis);
@@ -1734,6 +1784,7 @@ void fragment() {
     Vector3 GetRayPos(Vector2 pos) => GetViewport().GetCamera3D().ProjectRayOrigin(pos);
     Vector3 GetRay(Vector2 pos) => GetViewport().GetCamera3D().ProjectRayNormal(pos);
     Vector3 GetCameraNormal() => -GetViewport().GetCamera3D().GlobalTransform.Basis[2];
+    Vector2 PointToScreen(Vector3 point) => GetViewport().GetCamera3D().UnprojectPosition(point);
 
     /// <summary>
     /// Optional method to override the user translating the gizmo.

@@ -2,6 +2,7 @@
 class_name EditData
 extends Object
 
+var show_rotation_line : bool
 var original : Transform3D
 var mode : Gizmo3D.TransformMode
 var plane : Gizmo3D.TransformPlane

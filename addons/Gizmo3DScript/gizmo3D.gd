@@ -101,6 +101,9 @@ var show_axes := true
 ## If the box encapsulating the target nodes is drawn.
 @export
 var show_selection_box := true
+## Whether to show the line from the gizmo origin to the cursor when rotating.
+@export
+var show_rotation_line := true
 
 ## Alpha value for all gizmos and the selection box.
 @export_range(0.0, 1.0)
@@ -187,6 +190,8 @@ var _selection_box_xray_mat : StandardMaterial3D
 var _edit := EditData.new()
 var _gizmo_scale := 1.0
 
+var _surface : Control
+
 enum ToolMode { MOVE = 1, ROTATE = 2, SCALE = 4, ALL = 7 }
 enum TransformMode { NONE, ROTATE, TRANSLATE, SCALE }
 enum TransformPlane { VIEW, X, Y, Z, YZ, XZ, XY }
@@ -228,28 +233,56 @@ func _ready() -> void:
 	_update_transform_gizmo()
 	visibility_changed.connect(func(): _set_visibility(visible))
 	
+	_surface = Control.new()
+	add_child(_surface)
+	
 	layers = _layers
 	colors = _colors
 	selection_box_color = _selection_box_color
 
-### Get the current translation snap value.
-### https://github.com/godotengine/godot/blob/65eb6643522abbe8ebce6428fe082167a7df14f9/editor/scene/3d/node_3d_editor_plugin.cpp#L9935
+## 2D drawing using the RenderingServer and surface Control.
+## https://github.com/godotengine/godot/blob/65eb6643522abbe8ebce6428fe082167a7df14f9/editor/scene/3d/node_3d_editor_plugin.cpp#L3436
+func _draw():
+	var ci = _surface.get_canvas_item()
+	RenderingServer.canvas_item_clear(ci)
+	if _edit.mode == TransformMode.ROTATE and _edit.show_rotation_line and show_rotation_line:
+		var center = _point_to_screen(_edit.center)
+		
+		var handleColor : Color
+		match _edit.plane:
+			TransformPlane.X:
+				handleColor = colors[0]
+			TransformPlane.Y:
+				handleColor = colors[1]
+			TransformPlane.Z:
+				handleColor = colors[2]
+		handleColor = Color.from_hsv(handleColor.h, 0.25, 1.0, 1)
+		
+		RenderingServer.canvas_item_add_line(
+			ci,
+			_edit.mouse_pos,
+			center,
+			handleColor,
+			2)
+
+## Get the current translation snap value.
+## https://github.com/godotengine/godot/blob/65eb6643522abbe8ebce6428fe082167a7df14f9/editor/scene/3d/node_3d_editor_plugin.cpp#L9935
 func get_translate_snap():
 	var snap = translate_snap
 	if _shift_snap:
 		snap /= 10.0
 	return snap
 
-### Get the current rotation snap value.
-### https://github.com/godotengine/godot/blob/65eb6643522abbe8ebce6428fe082167a7df14f9/editor/scene/3d/node_3d_editor_plugin.cpp#L9943
+## Get the current rotation snap value.
+## https://github.com/godotengine/godot/blob/65eb6643522abbe8ebce6428fe082167a7df14f9/editor/scene/3d/node_3d_editor_plugin.cpp#L9943
 func get_rotation_snap():
 	var snap = rotate_snap
 	if _shift_snap:
 		snap /= 3.0
 	return snap
 
-### Get the current scale snap value.
-### https://github.com/godotengine/godot/blob/65eb6643522abbe8ebce6428fe082167a7df14f9/editor/scene/3d/node_3d_editor_plugin.cpp#L9951
+## Get the current scale snap value.
+## https://github.com/godotengine/godot/blob/65eb6643522abbe8ebce6428fe082167a7df14f9/editor/scene/3d/node_3d_editor_plugin.cpp#L9951
 func get_scale_snap():
 	var snap = scale_snap
 	if _shift_snap:
@@ -269,6 +302,7 @@ func _unhandled_input(event : InputEvent) -> void:
 		if !event.pressed:
 			_editing = false
 			_update_transform_gizmo_view()
+			_edit.mode = TransformMode.NONE
 			return
 		_edit.mouse_pos = event.position
 		_editing = _transform_gizmo_select(event.position)
@@ -326,6 +360,7 @@ func _enter_tree() -> void:
 
 func _process(delta : float) -> void:
 	_update_transform_gizmo()
+	_draw()
 
 func _exit_tree() -> void:
 	get_tree().root.focus_exited.disconnect(_on_focus_exited)
@@ -1325,11 +1360,13 @@ func _update_transform(shift : bool) -> Vector3:
 			
 			var angle : float
 			if axis_is_orthogonal:
+				_edit.show_rotation_line = false
 				var projection_axis := rplane.normal.cross(global_axis)
 				var delta = rintersection - rclick
 				var projection = delta.dot(projection_axis)
 				angle = (projection * (PI / 2.0)) / (_gizmo_scale * GIZMO_CIRCLE_SIZE)
 			else:
+				_edit.show_rotation_line = true
 				var click_axis = (rclick - _edit.center).normalized()
 				var current_axis = (rintersection - _edit.center).normalized()
 				angle = click_axis.signed_angle_to(current_axis, global_axis)
@@ -1415,6 +1452,9 @@ func _get_ray(pos : Vector2) -> Vector3:
 
 func _get_camera_normal() -> Vector3:
 	return -get_viewport().get_camera_3d().global_transform.basis[2]
+
+func _point_to_screen(point : Vector3) -> Vector2:
+	return get_viewport().get_camera_3d().unproject_position(point)
 
 ## Optional method to override the user translating the gizmo.
 func _edit_translate(translation : Vector3) -> Vector3:
