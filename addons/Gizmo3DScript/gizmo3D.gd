@@ -104,6 +104,9 @@ var show_selection_box := true
 ## Whether to show the line from the gizmo origin to the cursor when rotating.
 @export
 var show_rotation_line := true
+## Whether to show the arc indicating rotation accumulation when rotating.
+@export
+var show_rotation_arc := true
 
 ## Alpha value for all gizmos and the selection box.
 @export_range(0.0, 1.0)
@@ -245,37 +248,122 @@ func _ready() -> void:
 func _draw():
 	var ci = _surface.get_canvas_item()
 	RenderingServer.canvas_item_clear(ci)
-	if _edit.mode == TransformMode.ROTATE and _edit.show_rotation_line and show_rotation_line:
+	if _edit.mode == TransformMode.ROTATE:
 		var center = _point_to_screen(_edit.center)
 		
-		var handleColor : Color
+		var handle_color : Color
 		match _edit.plane:
 			TransformPlane.X:
-				handleColor = colors[0]
+				handle_color = colors[0]
 			TransformPlane.Y:
-				handleColor = colors[1]
+				handle_color = colors[1]
 			TransformPlane.Z:
-				handleColor = colors[2]
-		handleColor = Color.from_hsv(handleColor.h, 0.25, 1.0, 1)
+				handle_color = colors[2]
 		
-		RenderingServer.canvas_item_add_line(
-			ci,
-			_edit.mouse_pos,
-			center,
-			handleColor,
-			2)
+		if is_rotation_arc_visible() and !_edit.initial_click_vector.is_zero_approx():
+			var up := _edit.rotation_axis
+			var right := _edit.initial_click_vector
+
+			right -= up * up.dot(right)
+			right = right.normalized()
+			var forward := up.cross(right)
+
+			var circle_segments := 64
+			var circle_points := []
+			for i in range(circle_segments + 1):
+				var angle = float(i) /  float(circle_segments) * TAU
+				var point_3d = _edit.center + _gizmo_scale * GIZMO_CIRCLE_SIZE * (right * cos(angle) + forward * sin(angle))
+				var point_2d = _point_to_screen(point_3d)
+				circle_points.append(point_2d)
+
+			var circle_color := Color.from_hsv(handle_color.h, 0.6, 1.0, 0.8)
+			for i in range(circle_points.size() - 1):
+				RenderingServer.canvas_item_add_line(
+					ci,
+					circle_points[i],
+					circle_points[i + 1],
+					circle_color,
+					2)
+
+			var segments := 64
+			var display_angle := _edit.display_rotation_angle
+
+			var absAngle := abs(display_angle)
+			if absAngle > TAU:
+				var remainder := float(fposmod(absAngle, TAU))
+				remainder = float(TAU) if remainder < 0.01 else remainder
+				display_angle = sign(display_angle) * remainder
+				absAngle = remainder
+
+			var num_segments := max(8, (int) (absAngle / (TAU / segments) * segments))
+			num_segments = min(num_segments, segments)
+
+			var fillColor := Color(1.0, 1.0, 1.0, 0.2)
+
+			var is_counterclockwise := display_angle > 0
+			var start_angle := 0.0 if is_counterclockwise else display_angle
+			var end_angle := display_angle if is_counterclockwise else 0.0
+
+			for i in range(num_segments):
+				var t1 := float(i) / float(num_segments)
+				var t2 := float(i + 1) / float(num_segments)
+				var angle1 = lerp(start_angle, end_angle, t1)
+				var angle2 = lerp(start_angle, end_angle, t2)
+
+				var point1_3d = _edit.center + _gizmo_scale * GIZMO_CIRCLE_SIZE * (right * cos(angle1) + forward * sin(angle1))
+				var point2_3d = _edit.center + _gizmo_scale * GIZMO_CIRCLE_SIZE * (right * cos(angle2) + forward * sin(angle2))
+
+				var center_2d = center
+				var point1_2d = _point_to_screen(point1_3d)
+				var point2_2d = _point_to_screen(point2_3d)
+
+				var triangle_points = [center_2d, point1_2d, point2_2d]
+				var triangle_colors = [fillColor, fillColor, fillColor]
+				RenderingServer.canvas_item_add_polygon(ci, triangle_points, triangle_colors)
+
+			var edge_color := Color.from_hsv(handle_color.h, 0.8, 1.0, 0.7)
+
+			var start_point_3d := _edit.center + _gizmo_scale * GIZMO_CIRCLE_SIZE * right
+			var start_point_2d := _point_to_screen(start_point_3d)
+			RenderingServer.canvas_item_add_line(
+					ci,
+					center,
+					start_point_2d,
+					edge_color,
+					2)
+			
+			var end_point_3d = _edit.center + _gizmo_scale * GIZMO_CIRCLE_SIZE * (right * cos(display_angle) + forward * sin(display_angle))
+			var end_point_2d = _point_to_screen(end_point_3d)
+			RenderingServer.canvas_item_add_line(
+					ci,
+					center,
+					end_point_2d,
+					edge_color,
+					2)
+		
+		if _edit.show_rotation_line && show_rotation_line:
+			handle_color = Color.from_hsv(handle_color.h, 0.25, 1.0, 1)
+			RenderingServer.canvas_item_add_line(
+					ci,
+					_edit.mouse_pos,
+					center,
+					handle_color,
+					2)
+
+func is_rotation_arc_visible() -> bool:
+	return _edit.mode == TransformMode.ROTATE && show_rotation_arc && _edit.accumulated_rotation_angle != 0.0 && _edit.gizmo_initiated
 
 ## Get the current translation snap value.
 ## https://github.com/godotengine/godot/blob/65eb6643522abbe8ebce6428fe082167a7df14f9/editor/scene/3d/node_3d_editor_plugin.cpp#L9935
-func get_translate_snap():
-	var snap = translate_snap
+func get_translate_snap() -> float:
+	var snap := translate_snap
 	if _shift_snap:
 		snap /= 10.0
 	return snap
 
 ## Get the current rotation snap value.
 ## https://github.com/godotengine/godot/blob/65eb6643522abbe8ebce6428fe082167a7df14f9/editor/scene/3d/node_3d_editor_plugin.cpp#L9943
-func get_rotation_snap():
+func get_rotation_snap() -> float:
 	var snap = rotate_snap
 	if _shift_snap:
 		snap /= 3.0
@@ -283,7 +371,7 @@ func get_rotation_snap():
 
 ## Get the current scale snap value.
 ## https://github.com/godotengine/godot/blob/65eb6643522abbe8ebce6428fe082167a7df14f9/editor/scene/3d/node_3d_editor_plugin.cpp#L9951
-func get_scale_snap():
+func get_scale_snap() -> float:
 	var snap = scale_snap
 	if _shift_snap:
 		snap /= 2.0
@@ -304,6 +392,11 @@ func _unhandled_input(event : InputEvent) -> void:
 			_update_transform_gizmo_view()
 			_edit.mode = TransformMode.NONE
 			return
+		_edit.initial_click_vector = Vector3()
+		_edit.previous_rotation_vector = Vector3()
+		_edit.accumulated_rotation_angle = 0.0
+		_edit.display_rotation_angle = 0.0
+		_edit.gizmo_initiated = false
 		_edit.mouse_pos = event.position
 		_editing = _transform_gizmo_select(event.position)
 		if _editing:
@@ -379,7 +472,7 @@ func _on_focus_exited() -> void:
 	_editing = false
 	_hovering = false
 	_snapping = false
-	_shift_snap = false;
+	_shift_snap = false
 
 func _init_gizmo_instance() -> void:
 	for i in range(3):
@@ -784,6 +877,7 @@ func _update_transform_gizmo_view() -> void:
 		_set_visibility(false)
 		return
 	
+	var show_gizmo := !is_rotation_arc_visible()
 	for i in range(3):
 		var axis_angle : Transform3D
 		if xform.basis[i].normalized().dot(xform.basis[(i + 1) % 3].normalized()) < 1.0:
@@ -791,17 +885,17 @@ func _update_transform_gizmo_view() -> void:
 		axis_angle.basis *= Basis.from_scale(scale)
 		axis_angle.origin = xform.origin
 		RenderingServer.instance_set_transform(_move_gizmo_instance[i], axis_angle)
-		RenderingServer.instance_set_visible(_move_gizmo_instance[i], mode & ToolMode.MOVE and mode & ToolMode.SCALE)
+		RenderingServer.instance_set_visible(_move_gizmo_instance[i], show_gizmo and (mode & ToolMode.MOVE and mode & ToolMode.SCALE))
 		RenderingServer.instance_set_transform(_move_arrow_gizmo_instance[i], axis_angle)
-		RenderingServer.instance_set_visible(_move_arrow_gizmo_instance[i], mode & ToolMode.MOVE and not mode & ToolMode.SCALE)
+		RenderingServer.instance_set_visible(_move_arrow_gizmo_instance[i], show_gizmo and (mode & ToolMode.MOVE and not mode & ToolMode.SCALE))
 		RenderingServer.instance_set_transform(_move_plane_gizmo_instance[i], axis_angle)
-		RenderingServer.instance_set_visible(_move_plane_gizmo_instance[i], mode & ToolMode.MOVE)
+		RenderingServer.instance_set_visible(_move_plane_gizmo_instance[i], show_gizmo and mode & ToolMode.MOVE)
 		RenderingServer.instance_set_transform(_rotate_gizmo_instance[i], axis_angle)
-		RenderingServer.instance_set_visible(_rotate_gizmo_instance[i], mode & ToolMode.ROTATE)
+		RenderingServer.instance_set_visible(_rotate_gizmo_instance[i], show_gizmo and mode & ToolMode.ROTATE)
 		RenderingServer.instance_set_transform(_scale_gizmo_instance[i], axis_angle)
-		RenderingServer.instance_set_visible(_scale_gizmo_instance[i], mode & ToolMode.SCALE)
+		RenderingServer.instance_set_visible(_scale_gizmo_instance[i], show_gizmo and mode & ToolMode.SCALE)
 		RenderingServer.instance_set_transform(_scale_plane_gizmo_instance[i], axis_angle)
-		RenderingServer.instance_set_visible(_scale_plane_gizmo_instance[i], mode & ToolMode.SCALE and not (mode & ToolMode.MOVE))
+		RenderingServer.instance_set_visible(_scale_plane_gizmo_instance[i], show_gizmo and (mode & ToolMode.SCALE and not (mode & ToolMode.MOVE)))
 		RenderingServer.instance_set_transform(_axis_gizmo_instance[i], xform)
 	
 	var show := show_axes and editing
@@ -813,7 +907,7 @@ func _update_transform_gizmo_view() -> void:
 	xform = xform.orthonormalized()
 	xform.basis *= xform.basis.scaled(scale)
 	RenderingServer.instance_set_transform(_rotate_gizmo_instance[3], xform)
-	RenderingServer.instance_set_visible(_rotate_gizmo_instance[3], mode & ToolMode.ROTATE)
+	RenderingServer.instance_set_visible(_rotate_gizmo_instance[3], show_gizmo and mode & ToolMode.ROTATE)
 	
 	# Selection box
 	for key in _selections:
@@ -1072,6 +1166,9 @@ func _transform_gizmo_select(screen_pos : Vector2, highlight_only := false):
 				_edit.mode = TransformMode.ROTATE
 				_compute_edit(screen_pos)
 				_edit.plane = TransformPlane.X + col_axis
+				_edit.accumulated_rotation_angle = 0.0
+				_edit.rotation_axis = gt.basis[col_axis].normalized()
+				_edit.gizmo_initiated = true
 			return true
 	
 	if mode & ToolMode.SCALE:
@@ -1355,6 +1452,13 @@ func _update_transform(shift : bool) -> Vector3:
 			if rclick == null:
 				return Vector3.ZERO
 			
+			var current_rotation_vector = (rintersection - _edit.center).normalized()
+			if _edit.initial_click_vector == Vector3():
+				_edit.initial_click_vector = (rclick - _edit.center).normalized()
+				_edit.previous_rotation_vector = current_rotation_vector
+				_edit.accumulated_rotation_angle = 0.0
+				_edit.display_rotation_angle = 0.0
+			
 			var orthogonal_threshold := cos(deg_to_rad(85.0))
 			var axis_is_orthogonal = abs(rplane.normal.dot(global_axis)) < orthogonal_threshold
 			
@@ -1368,11 +1472,18 @@ func _update_transform(shift : bool) -> Vector3:
 			else:
 				_edit.show_rotation_line = true
 				var click_axis = (rclick - _edit.center).normalized()
-				var current_axis = (rintersection - _edit.center).normalized()
-				angle = click_axis.signed_angle_to(current_axis, global_axis)
+				angle = click_axis.signed_angle_to(current_rotation_vector, global_axis)
 			
+			if _edit.previous_rotation_vector != Vector3():
+				var delta_angle := _edit.previous_rotation_vector.signed_angle_to(current_rotation_vector, global_axis)
+				_edit.accumulated_rotation_angle += delta_angle
+			_edit.previous_rotation_vector = current_rotation_vector
+
 			if snapping:
 				snap = get_rotation_snap()
+				_edit.display_rotation_angle = deg_to_rad(snapped(rad_to_deg(_edit.accumulated_rotation_angle), snap))
+			else:
+				_edit.display_rotation_angle = _edit.accumulated_rotation_angle
 			
 			var rlocal_coords = use_local_space and _edit.plane != TransformPlane.VIEW # Disable local transformation for TRANSFORM_VIEW
 			var compute_axis := global_axis

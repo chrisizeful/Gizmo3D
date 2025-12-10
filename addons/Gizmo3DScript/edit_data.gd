@@ -10,3 +10,11 @@ var click_ray : Vector3
 var click_ray_pos : Vector3
 var center : Vector3
 var mouse_pos : Vector2
+
+## Rotation arc
+var rotation_axis : Vector3
+var accumulated_rotation_angle : float
+var display_rotation_angle : float
+var initial_click_vector : Vector3
+var previous_rotation_vector : Vector3
+var gizmo_initiated : bool

@@ -150,6 +150,11 @@ public partial class Gizmo3D : Node3D
     /// </summary>
     [Export]
     public bool ShowRotationLine { get; set; } = true;
+    /// <summary>
+    /// Whether to show the arc indicating rotation accumulation when rotating.
+    /// </summary>
+    [Export]
+    public bool ShowRotationArc { get; set; } = true;
 
     float opacity = .9f;
     /// <summary>
@@ -275,6 +280,12 @@ public partial class Gizmo3D : Node3D
         public Vector3 ClickRay, ClickRayPos;
         public Vector3 Center;
         public Vector2 MousePos;
+        
+        // Rotation arc
+        public Vector3 RotationAxis;
+        public float AccumulatedRotationAngle, DisplayRotationAngle;
+        public Vector3? InitialClickVector, PreviousRotationVector;
+        public bool GizmoInitiated;
     }
 
     /// <summary>
@@ -323,7 +334,7 @@ public partial class Gizmo3D : Node3D
     {
         Rid ci = surface.GetCanvasItem();
         CanvasItemClear(ci);
-        if (Edit.Mode == TransformMode.Rotate && Edit.ShowRotationLine && ShowRotationLine)
+        if (Edit.Mode == TransformMode.Rotate)
         {
             Vector2 center = PointToScreen(Edit.Center);
 
@@ -340,15 +351,117 @@ public partial class Gizmo3D : Node3D
                     handleColor = colors[2];
                     break;
             }
-            handleColor = Color.FromHsv(handleColor.H, 0.25f, 1.0f, 1);
 
-            CanvasItemAddLine(
-                ci,
-                Edit.MousePos,
-                center,
-                handleColor,
-                2);
+            if (IsRotationArcVisible() && Edit.InitialClickVector != null && !Edit.InitialClickVector.Value.IsZeroApprox())
+            {
+                Vector3 up = Edit.RotationAxis;
+                Vector3 right = Edit.InitialClickVector.Value;
+
+                right -= up * up.Dot(right);
+                right = right.Normalized();
+                Vector3 forward = up.Cross(right);
+
+                const int circleSegments = 64;
+                List<Vector2> circlePoints = [];
+                for (int i = 0; i <= circleSegments; i++)
+                {
+                    float angle = (float) i / (float) circleSegments * Mathf.Tau;
+                    Vector3 point_3d = Edit.Center + GizmoScale * GIZMO_CIRCLE_SIZE * (right * Mathf.Cos(angle) + forward * Mathf.Sin(angle));
+                    Vector2 point_2d = PointToScreen(point_3d);
+                    circlePoints.Add(point_2d);
+                }
+
+                Color circleColor = Color.FromHsv(handleColor.H, 0.6f, 1.0f, 0.8f);
+                for (int i = 0; i < circlePoints.Count - 1; i++)
+                {
+                    CanvasItemAddLine(
+                            ci,
+                            circlePoints[i],
+                            circlePoints[i + 1],
+                            circleColor,
+                            2);
+                }
+
+                const int segments = 64;
+                float displayAngle = Edit.DisplayRotationAngle;
+
+                float absAngle = Mathf.Abs(displayAngle);
+                if (absAngle > Mathf.Tau)
+                {
+                    float remainder = (float) Mathf.PosMod((double)absAngle, Mathf.Tau);
+                    remainder = remainder < 0.01f ? (float) Math.Tau : remainder;
+                    displayAngle = Mathf.Sign(displayAngle) * remainder;
+                    absAngle = remainder;
+                }
+
+                int numSegments = Mathf.Max(8, (int) (absAngle / (Mathf.Tau / segments) * segments));
+                numSegments = Mathf.Min(numSegments, segments);
+
+                Color fillColor = new(1.0f, 1.0f, 1.0f, 0.2f);
+
+                bool isCounterclockwise = displayAngle > 0;
+                float startAngle = isCounterclockwise ? 0.0f : displayAngle;
+                float endAngle = isCounterclockwise ? displayAngle : 0.0f;
+
+                for (int i = 0; i < numSegments; i++)
+                {
+                    float t1 = ((float) i) / (float) numSegments;
+                    float t2 = ((float) i + 1) / (float) numSegments;
+                    float angle1 = Mathf.Lerp(startAngle, endAngle, t1);
+                    float angle2 = Mathf.Lerp(startAngle, endAngle, t2);
+
+                    Vector3 point1_3d = Edit.Center + GizmoScale * GIZMO_CIRCLE_SIZE * (right * (float) Math.Cos(angle1) + forward * Mathf.Sin(angle1));
+                    Vector3 point2_3d = Edit.Center + GizmoScale * GIZMO_CIRCLE_SIZE * (right * (float) Math.Cos(angle2) + forward * Mathf.Sin(angle2));
+
+                    Vector2 center_2d = center;
+                    Vector2 point1_2d = PointToScreen(point1_3d);
+                    Vector2 point2_2d = PointToScreen(point2_3d);
+
+                    Vector2[] trianglePoints = [center_2d, point1_2d, point2_2d];
+                    Color[] triangleColors = [fillColor, fillColor, fillColor];
+                    CanvasItemAddPolygon(ci, trianglePoints, triangleColors);
+                }
+
+                Color edgeColor = Color.FromHsv(handleColor.H, 0.8f, 1.0f, 0.7f);
+
+                Vector3 startPoint3D = Edit.Center + GizmoScale * GIZMO_CIRCLE_SIZE * right;
+                Vector2 startPoint2D = PointToScreen(startPoint3D);
+                CanvasItemAddLine(
+                        ci,
+                        center,
+                        startPoint2D,
+                        edgeColor,
+                        2);
+
+                Vector3 endPoint3D = Edit.Center + GizmoScale * GIZMO_CIRCLE_SIZE * (right * Mathf.Cos(displayAngle) + forward * Mathf.Sin(displayAngle));
+                Vector2 endPoint2D = PointToScreen(endPoint3D);
+                CanvasItemAddLine(
+                        ci,
+                        center,
+                        endPoint2D,
+                        edgeColor,
+                        2);
+            }
+
+            if (Edit.ShowRotationLine && ShowRotationLine)
+            {
+                handleColor = Color.FromHsv(handleColor.H, 0.25f, 1.0f, 1);
+                CanvasItemAddLine(
+                        ci,
+                        Edit.MousePos,
+                        center,
+                        handleColor,
+                        2);
+            }
         }
+    }
+
+    /// <summary>
+    /// Whether the rotation arc is currently being drawn.
+    /// </summary>
+    public bool IsRotationArcVisible()
+    {
+	    return Edit.Mode == TransformMode.Rotate && ShowRotationArc && Edit.AccumulatedRotationAngle != 0.0f && Edit.GizmoInitiated;
     }
 
     /// <summary>
@@ -410,6 +523,11 @@ public partial class Gizmo3D : Node3D
                 Edit.Mode = TransformMode.None;
                 return;
             }
+            Edit.InitialClickVector = null;
+            Edit.PreviousRotationVector = null;
+            Edit.AccumulatedRotationAngle = 0.0f;
+            Edit.DisplayRotationAngle = 0.0f;
+            Edit.GizmoInitiated = false;
             Edit.MousePos = button.Position;
             Editing = TransformGizmoSelect(button.Position);
             if (Editing)
@@ -979,6 +1097,7 @@ void fragment() {
             return;
         }
 
+        bool showGizmo = !IsRotationArcVisible();
         for (int i = 0; i < 3; i++)
         {
             Transform3D axisAngle = Transform3D.Identity;
@@ -987,17 +1106,17 @@ void fragment() {
             axisAngle.Basis *= Basis.FromScale(scale);
             axisAngle.Origin = xform.Origin;
             InstanceSetTransform(MoveGizmoInstance[i], axisAngle);
-            InstanceSetVisible(MoveGizmoInstance[i], (Mode & ToolMode.Move) == ToolMode.Move && (Mode & ToolMode.Scale) == ToolMode.Scale);
+            InstanceSetVisible(MoveGizmoInstance[i], showGizmo && (Mode & ToolMode.Move) == ToolMode.Move && (Mode & ToolMode.Scale) == ToolMode.Scale);
             InstanceSetTransform(MoveArrowGizmoInstance[i], axisAngle);
-            InstanceSetVisible(MoveArrowGizmoInstance[i], (Mode & ToolMode.Move) == ToolMode.Move && (Mode & ToolMode.Scale) == 0);
+            InstanceSetVisible(MoveArrowGizmoInstance[i], showGizmo && (Mode & ToolMode.Move) == ToolMode.Move && (Mode & ToolMode.Scale) == 0);
             InstanceSetTransform(MovePlaneGizmoInstance[i], axisAngle);
-            InstanceSetVisible(MovePlaneGizmoInstance[i], (Mode & ToolMode.Move) == ToolMode.Move);
+            InstanceSetVisible(MovePlaneGizmoInstance[i], showGizmo && (Mode & ToolMode.Move) == ToolMode.Move);
             InstanceSetTransform(RotateGizmoInstance[i], axisAngle);
-            InstanceSetVisible(RotateGizmoInstance[i], (Mode & ToolMode.Rotate) == ToolMode.Rotate);
+            InstanceSetVisible(RotateGizmoInstance[i], showGizmo && (Mode & ToolMode.Rotate) == ToolMode.Rotate);
             InstanceSetTransform(ScaleGizmoInstance[i], axisAngle);
-            InstanceSetVisible(ScaleGizmoInstance[i], (Mode & ToolMode.Scale) == ToolMode.Scale);
+            InstanceSetVisible(ScaleGizmoInstance[i], showGizmo && (Mode & ToolMode.Scale) == ToolMode.Scale);
             InstanceSetTransform(ScalePlaneGizmoInstance[i], axisAngle);
-            InstanceSetVisible(ScalePlaneGizmoInstance[i], (Mode & ToolMode.Scale) == ToolMode.Scale && (Mode & ToolMode.Move) == 0);
+            InstanceSetVisible(ScalePlaneGizmoInstance[i], showGizmo && (Mode & ToolMode.Scale) == ToolMode.Scale && (Mode & ToolMode.Move) == 0);
             InstanceSetTransform(AxisGizmoInstance[i], xform);
         }
 
@@ -1010,7 +1129,7 @@ void fragment() {
         xform = xform.Orthonormalized();
         xform.Basis *= xform.Basis.Scaled(scale);
         InstanceSetTransform(RotateGizmoInstance[3], xform);
-        InstanceSetVisible(RotateGizmoInstance[3], (Mode & ToolMode.Rotate) == ToolMode.Rotate);
+        InstanceSetVisible(RotateGizmoInstance[3], showGizmo && (Mode & ToolMode.Rotate) == ToolMode.Rotate);
 
         // Selection box
         foreach (var item in Selections)
@@ -1320,6 +1439,9 @@ void fragment() {
                     Edit.Mode = TransformMode.Rotate;
                     ComputeEdit(screenpos);
                     Edit.Plane = TransformPlane.X + colAxis;
+                    Edit.AccumulatedRotationAngle = 0.0f;
+                    Edit.RotationAxis = gt.Basis[colAxis].Normalized();
+                    Edit.GizmoInitiated = true;
                 }
                 return true;
             }
@@ -1672,6 +1794,15 @@ void fragment() {
                 if (rclick == null)
                     break;
 
+                Vector3 currentRotationVector = (rintersection.Value - Edit.Center).Normalized();
+                if (Edit.InitialClickVector == null)
+                {
+                    Edit.InitialClickVector = (rclick.Value - Edit.Center).Normalized();
+                    Edit.PreviousRotationVector = currentRotationVector;
+                    Edit.AccumulatedRotationAngle = 0.0f;
+                    Edit.DisplayRotationAngle = 0.0f;
+                }
+
                 float orthogonalThreshold = Mathf.Cos(Mathf.DegToRad(85.0f));
                 bool axisIsOrthogonal = Mathf.Abs(rplane.Normal.Dot(globalAxis)) < orthogonalThreshold;
 
@@ -1688,12 +1819,25 @@ void fragment() {
                 {
                     Edit.ShowRotationLine = true;
                     Vector3 clickAxis = (rclick.Value - Edit.Center).Normalized();
-                    Vector3 currentAxis = (rintersection.Value - Edit.Center).Normalized();
-                    angle = clickAxis.SignedAngleTo(currentAxis, globalAxis);
+				    angle = clickAxis.SignedAngleTo(currentRotationVector, globalAxis);
                 }
 
+                if (Edit.PreviousRotationVector != null)
+                {
+                    float deltaAngle = Edit.PreviousRotationVector.Value.SignedAngleTo(currentRotationVector, globalAxis);
+                    Edit.AccumulatedRotationAngle += deltaAngle;
+                }
+                Edit.PreviousRotationVector = currentRotationVector;
+
                 if (Snapping)
+                {
                     snap = GetRotationSnap();
+                    Edit.DisplayRotationAngle = Mathf.DegToRad(Mathf.Snapped(Mathf.RadToDeg(Edit.AccumulatedRotationAngle), snap));
+                }
+                else
+                {
+                    Edit.DisplayRotationAngle = Edit.AccumulatedRotationAngle;
+                }
 
                 bool rlocalCoords = UseLocalSpace && Edit.Plane != TransformPlane.View; // Disable local transformation for TRANSFORM_VIEW
                 Vector3 computeAxis = rlocalCoords ? localAxis : globalAxis;
