@@ -199,6 +199,8 @@ enum ToolMode { MOVE = 1, ROTATE = 2, SCALE = 4, ALL = 7 }
 enum TransformMode { NONE, ROTATE, TRANSLATE, SCALE }
 enum TransformPlane { VIEW, X, Y, Z, YZ, XZ, XY }
 
+## Emitted when the user selects or deselects a node.
+signal selection_changed(node : Node3D, selected : bool)
 ## Emitted when the user begins interacting with the gizmo.
 signal transform_begin(mode : TransformMode)
 ## Emitted as the user continues to interact with the gizmo.
@@ -415,6 +417,7 @@ func _unhandled_input(event : InputEvent) -> void:
 ## Add a node to the list of nodes currently being edited.
 func select(target : Node3D) -> void:
 	_selections[target] = _get_editor_data()
+	emit_signal("selection_changed", target, true)
 
 ## Remove a node from the list of nodes currently being edited.
 func deselect(target : Node3D) -> bool:
@@ -426,6 +429,7 @@ func deselect(target : Node3D) -> bool:
 	RenderingServer.free_rid(item.sbox_instance_offset)
 	RenderingServer.free_rid(item.sbox_xray_instance)
 	RenderingServer.free_rid(item.sbox_xray_instance_offset)
+	emit_signal("selection_changed", target, false)
 	return true
 
 ## Check if a node is currently selected.
@@ -440,6 +444,7 @@ func clear_selection() -> void:
 		RenderingServer.free_rid(item.sbox_instance_offset)
 		RenderingServer.free_rid(item.sbox_xray_instance)
 		RenderingServer.free_rid(item.sbox_xray_instance_offset)
+		emit_signal("selection_changed", key, false)
 	_selections.clear()
 
 ## Get the number of nodes currently being edited.

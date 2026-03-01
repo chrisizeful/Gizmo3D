@@ -299,6 +299,11 @@ public partial class Gizmo3D : Node3D
     };
 
     /// <summary>
+    /// Emitted when the user selects or deselects a node.
+    /// </summary>
+    [Signal]
+    public delegate void SelectionChangedEventHandler(Node3D node, bool selected);
+    /// <summary>
     /// Emitted when the user begins interacting with the gizmo.
     /// </summary>
     [Signal]
@@ -558,6 +563,7 @@ public partial class Gizmo3D : Node3D
     public void Select(Node3D target)
     {
         Selections[target] = GetEditorData();
+        EmitSignal(SignalName.SelectionChanged, target, true);
     }
 
     /// <summary>
@@ -573,6 +579,7 @@ public partial class Gizmo3D : Node3D
         FreeRid(item.SboxInstanceOffset);
         FreeRid(item.SboxXrayInstance);
         FreeRid(item.SboxXrayInstanceOffset);
+        EmitSignal(SignalName.SelectionChanged, target, false);
         return true;
     }
 
@@ -597,6 +604,7 @@ public partial class Gizmo3D : Node3D
             FreeRid(item.Value.SboxInstanceOffset);
             FreeRid(item.Value.SboxXrayInstance);
             FreeRid(item.Value.SboxXrayInstanceOffset);
+            EmitSignal(SignalName.SelectionChanged, item.Key, false);
         }
         Selections.Clear();
     }

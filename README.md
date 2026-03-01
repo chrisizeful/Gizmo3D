@@ -10,11 +10,12 @@ Once installed, you can add a Gizmo3D node to your project. For usage, it's reco
 ### Usage
 
 #### Signals
-C#                 | GDScript            |
+C#                  | GDScript            |
 --------------------|---------------------|
-`TransformBegin`   | `transform_begin`   |
-`TransformChanged` | `transform_changed` |
-`TransformEnd`     | `transform_end`     |
+`SelectionChanged`  | `selection_changed` |
+`TransformBegin`    | `transform_begin`   |
+`TransformChanged`  | `transform_changed` |
+`TransformEnd`      | `transform_end`     |
 
 #### Overridable Transformations
 | C#                | GDScript             |
