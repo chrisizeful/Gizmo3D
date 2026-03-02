@@ -58,6 +58,8 @@ public partial class Gizmo3D : Node3D
     /// </summary>
     [Export(PropertyHint.Flags)]
     public ToolMode Mode { get; set; } = ToolMode.Move | ToolMode.Scale | ToolMode.Rotate;
+    [Export(PropertyHint.Flags)]
+    public AxisMode Axes { get; set; } = AxisMode.X | AxisMode.Y | AxisMode.Z;
 
     uint layers = 1;
     /// <summary>
@@ -265,6 +267,8 @@ public partial class Gizmo3D : Node3D
 
     [Flags]
     public enum ToolMode { Move = 1, Rotate = 2, Scale = 4, All = 7 };
+    [Flags]
+    public enum AxisMode { X = 1, Y = 2, Z = 4, All = 7 };
     public enum TransformMode { None, Rotate, Translate, Scale };
     enum TransformPlane { View, X, Y, Z, YZ, XZ, XY, };
 
@@ -1114,17 +1118,20 @@ void fragment() {
             axisAngle.Basis *= Basis.FromScale(scale);
             axisAngle.Origin = xform.Origin;
             InstanceSetTransform(MoveGizmoInstance[i], axisAngle);
-            InstanceSetVisible(MoveGizmoInstance[i], showGizmo && (Mode & ToolMode.Move) == ToolMode.Move && (Mode & ToolMode.Scale) == ToolMode.Scale);
+
+            AxisMode axisFlag = (AxisMode)(1 << i);
+            bool axisEnabled = (Axes & axisFlag) != 0;
+            InstanceSetVisible(MoveGizmoInstance[i], showGizmo && axisEnabled && (Mode & ToolMode.Move) == ToolMode.Move && (Mode & ToolMode.Scale) == ToolMode.Scale);
             InstanceSetTransform(MoveArrowGizmoInstance[i], axisAngle);
-            InstanceSetVisible(MoveArrowGizmoInstance[i], showGizmo && (Mode & ToolMode.Move) == ToolMode.Move && (Mode & ToolMode.Scale) == 0);
+            InstanceSetVisible(MoveArrowGizmoInstance[i], showGizmo && axisEnabled && (Mode & ToolMode.Move) == ToolMode.Move && (Mode & ToolMode.Scale) == 0);
             InstanceSetTransform(MovePlaneGizmoInstance[i], axisAngle);
-            InstanceSetVisible(MovePlaneGizmoInstance[i], showGizmo && (Mode & ToolMode.Move) == ToolMode.Move);
+            InstanceSetVisible(MovePlaneGizmoInstance[i], showGizmo && axisEnabled && (Mode & ToolMode.Move) == ToolMode.Move);
             InstanceSetTransform(RotateGizmoInstance[i], axisAngle);
-            InstanceSetVisible(RotateGizmoInstance[i], showGizmo && (Mode & ToolMode.Rotate) == ToolMode.Rotate);
+            InstanceSetVisible(RotateGizmoInstance[i], showGizmo && axisEnabled && (Mode & ToolMode.Rotate) == ToolMode.Rotate);
             InstanceSetTransform(ScaleGizmoInstance[i], axisAngle);
-            InstanceSetVisible(ScaleGizmoInstance[i], showGizmo && (Mode & ToolMode.Scale) == ToolMode.Scale);
+            InstanceSetVisible(ScaleGizmoInstance[i], showGizmo && axisEnabled && (Mode & ToolMode.Scale) == ToolMode.Scale);
             InstanceSetTransform(ScalePlaneGizmoInstance[i], axisAngle);
-            InstanceSetVisible(ScalePlaneGizmoInstance[i], showGizmo && (Mode & ToolMode.Scale) == ToolMode.Scale && (Mode & ToolMode.Move) == 0);
+            InstanceSetVisible(ScalePlaneGizmoInstance[i], showGizmo && axisEnabled && (Mode & ToolMode.Scale) == ToolMode.Scale && (Mode & ToolMode.Move) == 0);
             InstanceSetTransform(AxisGizmoInstance[i], xform);
         }
 
@@ -1169,13 +1176,15 @@ void fragment() {
     {
         for (int i = 0; i < 3; i++)
         {
-            InstanceSetVisible(MoveGizmoInstance[i], visible);
-            InstanceSetVisible(MoveArrowGizmoInstance[i], visible);
-            InstanceSetVisible(MovePlaneGizmoInstance[i], visible);
-            InstanceSetVisible(RotateGizmoInstance[i], visible);
-            InstanceSetVisible(ScaleGizmoInstance[i], visible);
-            InstanceSetVisible(ScalePlaneGizmoInstance[i], visible);
-            InstanceSetVisible(AxisGizmoInstance[i], visible);
+            AxisMode axisFlag = (AxisMode)(1 << i);
+            bool axisEnabled = (Axes & axisFlag) != 0;
+            InstanceSetVisible(MoveGizmoInstance[i], visible && axisEnabled);
+            InstanceSetVisible(MoveArrowGizmoInstance[i], visible && axisEnabled);
+            InstanceSetVisible(MovePlaneGizmoInstance[i], visible && axisEnabled);
+            InstanceSetVisible(RotateGizmoInstance[i], visible && axisEnabled);
+            InstanceSetVisible(ScaleGizmoInstance[i], visible && axisEnabled);
+            InstanceSetVisible(ScalePlaneGizmoInstance[i], visible && axisEnabled);
+            InstanceSetVisible(AxisGizmoInstance[i], visible && axisEnabled);
         }
         // Rotation white outline
         InstanceSetVisible(RotateGizmoInstance[3], visible);
@@ -1317,6 +1326,8 @@ void fragment() {
 
             for (int i = 0; i < 3; i++)
             {
+                if ((Axes & (AxisMode)(1 << i)) == 0)
+                    continue;
                 Vector3 grabberPos = gt.Origin + gt.Basis[i].Normalized() * GizmoScale * (GIZMO_ARROW_OFFSET + (GIZMO_ARROW_SIZE * 0.5f));
                 float grabberRadius = GizmoScale * GIZMO_ARROW_SIZE;
 
@@ -1340,6 +1351,8 @@ void fragment() {
 
                 for (int i = 0; i < 3; i++)
                 {
+                    if ((Axes & (AxisMode)(1 << i)) == 0)
+                        continue;
                     Vector3 ivec2 = gt.Basis[(i + 1) % 3].Normalized();
                     Vector3 ivec3 = gt.Basis[(i + 2) % 3].Normalized();
 
@@ -1403,6 +1416,8 @@ void fragment() {
                     int minAxis = (int) hitPosition.MinAxisIndex();
                     if (hitPosition[minAxis] < GizmoScale * GIZMO_RING_HALF_WIDTH)
                         colAxis = minAxis;
+                    if ((Axes & (AxisMode)(1 << colAxis)) == 0)
+                        colAxis = -1;
                 }
             }
 
@@ -1412,6 +1427,8 @@ void fragment() {
 
                 for (int i = 0; i < 3; i++)
                 {
+                    if ((Axes & (AxisMode)(1 << i)) == 0)
+                        continue;
                     Plane plane = new(gt.Basis[i].Normalized(), gt.Origin);
                     Vector3? r = plane.IntersectsRay(rayPos, ray);
                     if (r == null)
@@ -1462,6 +1479,8 @@ void fragment() {
 
             for (int i = 0; i < 3; i++)
             {
+                if ((Axes & (AxisMode)(1 << i)) == 0)
+                    continue;
                 Vector3 grabberPos = gt.Origin + gt.Basis[i].Normalized() * GizmoScale * GIZMO_SCALE_OFFSET;
                 float grabberRadius = GizmoScale * GIZMO_ARROW_SIZE;
 
@@ -1485,6 +1504,8 @@ void fragment() {
 
                 for (int i = 0; i < 3; i++)
                 {
+                    if ((Axes & (AxisMode)(1 << ((i + 1) % 3))) == 0 || (Axes & (AxisMode)(1 << ((i + 2) % 3))) == 0)
+                        continue;
                     Vector3 ivec2 = gt.Basis[(i + 1) % 3].Normalized();
                     Vector3 ivec3 = gt.Basis[(i + 2) % 3].Normalized();
 
