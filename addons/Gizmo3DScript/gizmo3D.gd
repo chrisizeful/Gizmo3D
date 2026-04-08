@@ -35,6 +35,13 @@ var mode = ToolMode.MOVE | ToolMode.SCALE | ToolMode.ROTATE
 @export_flags("X", "Y", "Z")
 var axes = AxisMode.X | AxisMode.Y | AxisMode.Z
 
+@export_flags("X", "Y", "Z")
+var move_axes = AxisMode.X | AxisMode.Y | AxisMode.Z
+@export_flags("X", "Y", "Z")
+var scale_axes = AxisMode.X | AxisMode.Y | AxisMode.Z
+@export_flags("X", "Y", "Z")
+var rotation_axes = AxisMode.X | AxisMode.Y | AxisMode.Z
+
 @export_flags_3d_render
 var _layers := 1
 ## The 3D render layers this gizmo is visible on.
@@ -898,19 +905,21 @@ func _update_transform_gizmo_view() -> void:
 		axis_angle.origin = xform.origin
 		
 		var axisFlag := (1 << i) as AxisMode
-		var axisEnabled = (axes & axisFlag) != 0
+		var move_axis_enabled = (axes & move_axes & axisFlag) != 0
+		var rotateAxisEnabled = (axes & rotation_axes & axisFlag) != 0
+		var scaleAxisEnabled = (axes & scale_axes & axisFlag) != 0
 		RenderingServer.instance_set_transform(_move_gizmo_instance[i], axis_angle)
-		RenderingServer.instance_set_visible(_move_gizmo_instance[i], show_gizmo and axisEnabled and (mode & ToolMode.MOVE and mode & ToolMode.SCALE))
+		RenderingServer.instance_set_visible(_move_gizmo_instance[i], show_gizmo and move_axis_enabled and (mode & ToolMode.MOVE and mode & ToolMode.SCALE))
 		RenderingServer.instance_set_transform(_move_arrow_gizmo_instance[i], axis_angle)
-		RenderingServer.instance_set_visible(_move_arrow_gizmo_instance[i], show_gizmo and axisEnabled and (mode & ToolMode.MOVE and not mode & ToolMode.SCALE))
+		RenderingServer.instance_set_visible(_move_arrow_gizmo_instance[i], show_gizmo and move_axis_enabled and (mode & ToolMode.MOVE and not mode & ToolMode.SCALE))
 		RenderingServer.instance_set_transform(_move_plane_gizmo_instance[i], axis_angle)
-		RenderingServer.instance_set_visible(_move_plane_gizmo_instance[i], show_transform_plane and show_gizmo and axisEnabled and mode & ToolMode.MOVE)
+		RenderingServer.instance_set_visible(_move_plane_gizmo_instance[i], show_transform_plane and show_gizmo and move_axis_enabled and mode & ToolMode.MOVE)
 		RenderingServer.instance_set_transform(_rotate_gizmo_instance[i], axis_angle)
-		RenderingServer.instance_set_visible(_rotate_gizmo_instance[i], show_gizmo and axisEnabled and mode & ToolMode.ROTATE)
+		RenderingServer.instance_set_visible(_rotate_gizmo_instance[i], show_gizmo and rotateAxisEnabled and mode & ToolMode.ROTATE)
 		RenderingServer.instance_set_transform(_scale_gizmo_instance[i], axis_angle)
-		RenderingServer.instance_set_visible(_scale_gizmo_instance[i], show_gizmo and axisEnabled and mode & ToolMode.SCALE)
+		RenderingServer.instance_set_visible(_scale_gizmo_instance[i], show_gizmo and scaleAxisEnabled and mode & ToolMode.SCALE)
 		RenderingServer.instance_set_transform(_scale_plane_gizmo_instance[i], axis_angle)
-		RenderingServer.instance_set_visible(_scale_plane_gizmo_instance[i], show_transform_plane and show_gizmo and axisEnabled and (mode & ToolMode.SCALE and not (mode & ToolMode.MOVE)))
+		RenderingServer.instance_set_visible(_scale_plane_gizmo_instance[i], show_transform_plane and show_gizmo and scaleAxisEnabled and (mode & ToolMode.SCALE and not (mode & ToolMode.MOVE)))
 		RenderingServer.instance_set_transform(_axis_gizmo_instance[i], xform)
 	
 	var show := show_axes and editing
@@ -951,14 +960,16 @@ func _update_transform_gizmo_view() -> void:
 func _set_visibility(visible : bool) -> void:
 	for i in range(3):
 		var axisFlag := (1 << i) as AxisMode
-		var axisEnabled = (axes & axisFlag) != 0
-		RenderingServer.instance_set_visible(_move_gizmo_instance[i], visible and axisEnabled)
-		RenderingServer.instance_set_visible(_move_arrow_gizmo_instance[i], visible and axisEnabled)
-		RenderingServer.instance_set_visible(_move_plane_gizmo_instance[i], visible and axisEnabled)
-		RenderingServer.instance_set_visible(_rotate_gizmo_instance[i], visible and axisEnabled)
-		RenderingServer.instance_set_visible(_scale_gizmo_instance[i], visible and axisEnabled)
-		RenderingServer.instance_set_visible(_scale_plane_gizmo_instance[i], visible and axisEnabled)
-		RenderingServer.instance_set_visible(_axis_gizmo_instance[i], visible and axisEnabled)
+		var move_axis_enabled = (axes & move_axes & axisFlag) != 0
+		var rotate_axis_enabled = (axes & rotation_axes & axisFlag) != 0
+		var scale_axis_enabled = (axes & scale_axes & axisFlag) != 0
+		RenderingServer.instance_set_visible(_move_gizmo_instance[i], visible and move_axis_enabled)
+		RenderingServer.instance_set_visible(_move_arrow_gizmo_instance[i], visible and move_axis_enabled)
+		RenderingServer.instance_set_visible(_move_plane_gizmo_instance[i], visible and move_axis_enabled)
+		RenderingServer.instance_set_visible(_rotate_gizmo_instance[i], visible and rotate_axis_enabled)
+		RenderingServer.instance_set_visible(_scale_gizmo_instance[i], visible and scale_axis_enabled)
+		RenderingServer.instance_set_visible(_scale_plane_gizmo_instance[i], visible and scale_axis_enabled)
+		RenderingServer.instance_set_visible(_axis_gizmo_instance[i], visible and (axes & axisFlag) != 0)
 	RenderingServer.instance_set_visible(_rotate_gizmo_instance[3], visible)
 	for key in _selections:
 		var item = _selections[key]
@@ -1089,7 +1100,7 @@ func _transform_gizmo_select(screen_pos : Vector2, highlight_only := false):
 		var colD : float = 1e20
 		
 		for i in range(3):
-			if ((axes & ((1 << i) as AxisMode)) == 0):
+			if ((axes & move_axes & ((1 << i) as AxisMode)) == 0):
 				continue
 			var grabber_pos = gt.origin + gt.basis[i].normalized() * _gizmo_scale * (GIZMO_ARROW_OFFSET + (GIZMO_ARROW_SIZE * 0.5))
 			var grabber_radius := _gizmo_scale * GIZMO_ARROW_SIZE
@@ -1107,7 +1118,7 @@ func _transform_gizmo_select(screen_pos : Vector2, highlight_only := false):
 			colD = 1e20
 			
 			for i in range(3):
-				if ((axes & ((1 << i) as AxisMode)) == 0):
+				if ((axes & move_axes & ((1 << i) as AxisMode)) == 0):
 					continue
 				var ivec2 := gt.basis[(i + 1) % 3].normalized()
 				var ivec3 := gt.basis[(i + 2) % 3].normalized()
@@ -1159,14 +1170,14 @@ func _transform_gizmo_select(screen_pos : Vector2, highlight_only := false):
 				var min_axis = hit_position.min_axis_index()
 				if hit_position[min_axis] < _gizmo_scale * GIZMO_RING_HALF_WIDTH:
 					col_axis = min_axis
-				if ((axes & ((1 << col_axis) as AxisMode)) == 0):
+				if ((axes & rotation_axes & ((1 << col_axis) as AxisMode)) == 0):
 					col_axis = -1
 		
 		if col_axis == -1:
 			var colD : float = 1e20
 			
 			for i in range(3):
-				if ((axes & ((1 << i) as AxisMode)) == 0):
+				if ((axes & rotation_axes & ((1 << i) as AxisMode)) == 0):
 					continue
 				var plane := Plane(gt.basis[i].normalized(), gt.origin)
 				var r := plane.intersects_ray(ray_pos, ray)
@@ -1201,7 +1212,7 @@ func _transform_gizmo_select(screen_pos : Vector2, highlight_only := false):
 		var colD : float = 1e20
 		
 		for i in range(3):
-			if ((axes & ((1 << i) as AxisMode)) == 0):
+			if ((axes & scale_axes & ((1 << i) as AxisMode)) == 0):
 					continue
 			var grabber_pos := gt.origin + gt.basis[i].normalized() * _gizmo_scale * GIZMO_SCALE_OFFSET
 			var grabber_radius := _gizmo_scale * GIZMO_ARROW_SIZE
@@ -1219,7 +1230,7 @@ func _transform_gizmo_select(screen_pos : Vector2, highlight_only := false):
 			colD = 1e20
 			
 			for i in range(3):
-				if ((axes & ((1 << i) as AxisMode)) == 0):
+				if ((axes & scale_axes & ((1 << i) as AxisMode)) == 0):
 					continue
 				var ivec2 := gt.basis[(i + 1) % 3].normalized()
 				var ivec3 := gt.basis[(i + 2) % 3].normalized()
