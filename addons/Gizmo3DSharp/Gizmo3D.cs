@@ -157,6 +157,11 @@ public partial class Gizmo3D : Node3D
     /// </summary>
     [Export]
     public bool ShowRotationArc { get; set; } = true;
+    /// <summary>
+    /// Whether to show the move/scale transformation planes.
+    /// </summary>
+    [Export]
+    public bool ShowTransformPlane { get; set; } = true;
 
     float opacity = .9f;
     /// <summary>
@@ -1125,13 +1130,13 @@ void fragment() {
             InstanceSetTransform(MoveArrowGizmoInstance[i], axisAngle);
             InstanceSetVisible(MoveArrowGizmoInstance[i], showGizmo && axisEnabled && (Mode & ToolMode.Move) == ToolMode.Move && (Mode & ToolMode.Scale) == 0);
             InstanceSetTransform(MovePlaneGizmoInstance[i], axisAngle);
-            InstanceSetVisible(MovePlaneGizmoInstance[i], showGizmo && axisEnabled && (Mode & ToolMode.Move) == ToolMode.Move);
+            InstanceSetVisible(MovePlaneGizmoInstance[i], ShowTransformPlane && showGizmo && axisEnabled && (Mode & ToolMode.Move) == ToolMode.Move);
             InstanceSetTransform(RotateGizmoInstance[i], axisAngle);
             InstanceSetVisible(RotateGizmoInstance[i], showGizmo && axisEnabled && (Mode & ToolMode.Rotate) == ToolMode.Rotate);
             InstanceSetTransform(ScaleGizmoInstance[i], axisAngle);
             InstanceSetVisible(ScaleGizmoInstance[i], showGizmo && axisEnabled && (Mode & ToolMode.Scale) == ToolMode.Scale);
             InstanceSetTransform(ScalePlaneGizmoInstance[i], axisAngle);
-            InstanceSetVisible(ScalePlaneGizmoInstance[i], showGizmo && axisEnabled && (Mode & ToolMode.Scale) == ToolMode.Scale && (Mode & ToolMode.Move) == 0);
+            InstanceSetVisible(ScalePlaneGizmoInstance[i], ShowTransformPlane && showGizmo && axisEnabled && (Mode & ToolMode.Scale) == ToolMode.Scale && (Mode & ToolMode.Move) == 0);
             InstanceSetTransform(AxisGizmoInstance[i], xform);
         }
 

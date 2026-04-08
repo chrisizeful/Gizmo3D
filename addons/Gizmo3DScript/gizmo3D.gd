@@ -110,6 +110,9 @@ var show_rotation_line := true
 ## Whether to show the arc indicating rotation accumulation when rotating.
 @export
 var show_rotation_arc := true
+## Whether to show the move/scale transformation planes.
+@export
+var show_transform_plane := true
 
 ## Alpha value for all gizmos and the selection box.
 @export_range(0.0, 1.0)
@@ -901,13 +904,13 @@ func _update_transform_gizmo_view() -> void:
 		RenderingServer.instance_set_transform(_move_arrow_gizmo_instance[i], axis_angle)
 		RenderingServer.instance_set_visible(_move_arrow_gizmo_instance[i], show_gizmo and axisEnabled and (mode & ToolMode.MOVE and not mode & ToolMode.SCALE))
 		RenderingServer.instance_set_transform(_move_plane_gizmo_instance[i], axis_angle)
-		RenderingServer.instance_set_visible(_move_plane_gizmo_instance[i], show_gizmo and axisEnabled and mode & ToolMode.MOVE)
+		RenderingServer.instance_set_visible(_move_plane_gizmo_instance[i], show_transform_plane and show_gizmo and axisEnabled and mode & ToolMode.MOVE)
 		RenderingServer.instance_set_transform(_rotate_gizmo_instance[i], axis_angle)
 		RenderingServer.instance_set_visible(_rotate_gizmo_instance[i], show_gizmo and axisEnabled and mode & ToolMode.ROTATE)
 		RenderingServer.instance_set_transform(_scale_gizmo_instance[i], axis_angle)
 		RenderingServer.instance_set_visible(_scale_gizmo_instance[i], show_gizmo and axisEnabled and mode & ToolMode.SCALE)
 		RenderingServer.instance_set_transform(_scale_plane_gizmo_instance[i], axis_angle)
-		RenderingServer.instance_set_visible(_scale_plane_gizmo_instance[i], show_gizmo and axisEnabled and (mode & ToolMode.SCALE and not (mode & ToolMode.MOVE)))
+		RenderingServer.instance_set_visible(_scale_plane_gizmo_instance[i], show_transform_plane and show_gizmo and axisEnabled and (mode & ToolMode.SCALE and not (mode & ToolMode.MOVE)))
 		RenderingServer.instance_set_transform(_axis_gizmo_instance[i], xform)
 	
 	var show := show_axes and editing

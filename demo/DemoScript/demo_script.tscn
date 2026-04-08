@@ -34,6 +34,7 @@ shadow_enabled = true
 
 [node name="Gizmo3D" type="Node3D" parent="." unique_id=654773333]
 script = ExtResource("3_6yall")
+show_transform_plane = false
 _colors = Array[Color]([Color(0.110124, 0.605119, 0.705983, 1), Color(0.073115, 0.456205, 0.535289, 1), Color(0.0479613, 0.352446, 0.415412, 1)])
 _selection_box_color = Color(0.702439, 0.601297, 0.864144, 1)
 
