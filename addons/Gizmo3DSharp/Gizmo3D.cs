@@ -538,9 +538,12 @@ public partial class Gizmo3D : Node3D
         {
             if (!button.Pressed)
             {
+                bool previous = Editing;
                 Editing = false;
                 UpdateTransformGizmo();
                 Edit.Mode = TransformMode.None;
+                if (previous) // Only consume input if previously editing
+                    GetViewport().SetInputAsHandled();
                 return;
             }
             Edit.InitialClickVector = null;
@@ -551,7 +554,10 @@ public partial class Gizmo3D : Node3D
             Edit.MousePos = button.Position;
             Editing = TransformGizmoSelect(button.Position);
             if (Editing)
+            {
                 EmitSignal(SignalName.TransformBegin, (int) Edit.Mode);
+                GetViewport().SetInputAsHandled();
+            }
         }
         else if (@event is InputEventMouseMotion motion)
         {
@@ -562,6 +568,7 @@ public partial class Gizmo3D : Node3D
                     Edit.MousePos = motion.Position;
                     Vector3 value = UpdateTransform(false);
                     EmitSignal(SignalName.TransformChanged, (int) Edit.Mode, value);
+                    GetViewport().SetInputAsHandled();
                 }
                 return;
             }

@@ -404,9 +404,12 @@ func _unhandled_input(event : InputEvent) -> void:
 			_shift_snap = event.pressed
 	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		if !event.pressed:
+			var previous := _editing
 			_editing = false
 			_update_transform_gizmo_view()
 			_edit.mode = TransformMode.NONE
+			if previous: # Only consume input if previously editing
+				get_viewport().set_input_as_handled()
 			return
 		_edit.initial_click_vector = Vector3()
 		_edit.previous_rotation_vector = Vector3()
@@ -417,12 +420,14 @@ func _unhandled_input(event : InputEvent) -> void:
 		_editing = _transform_gizmo_select(event.position)
 		if _editing:
 			emit_signal("transform_begin", _edit.mode)
+			get_viewport().set_input_as_handled()
 	elif event is InputEventMouseMotion:
 		if _editing:
 			if event.button_mask & MOUSE_BUTTON_MASK_LEFT:
 				_edit.mouse_pos = event.position
 				var value := _update_transform(false)
 				emit_signal("transform_changed", _edit.mode, value)
+				get_viewport().set_input_as_handled()
 			return
 		_hovering = _transform_gizmo_select(event.position, true)
 
