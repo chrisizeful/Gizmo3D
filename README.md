@@ -7,9 +7,8 @@ Copy either Gizmo3DScript or Gizmo3DSharp from the addons folder into the addons
 
 Once installed, you can add a Gizmo3D node to your project. For usage, it's recommended to take a look at the demo project - note that to use the demo you will have to **git clone** the repo, since the artifact is setup for use with the Godot Asset Library.
 
-### Usage
+### Signals
 
-#### Signals
 C#                  | GDScript            |
 --------------------|---------------------|
 `SelectionChanged`  | `selection_changed` |
@@ -17,7 +16,8 @@ C#                  | GDScript            |
 `TransformChanged`  | `transform_changed` |
 `TransformEnd`      | `transform_end`     |
 
-#### Overridable Transformations
+### Overridable Transformations
+
 | C#                | GDScript             |
 |-------------------|----------------------|
 | `EditTranslate()` | `_edit_translate()`  |
