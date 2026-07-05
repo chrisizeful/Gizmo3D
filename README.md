@@ -1,3 +1,35 @@
+
+<div align="right">
+  <details>
+    <summary >🌐 Language</summary>
+    <div>
+      <div align="center">
+        <a href="https://openaitx.github.io/view.html?user=chrisizeful&project=Gizmo3D&lang=en">English</a>
+        | <a href="https://openaitx.github.io/view.html?user=chrisizeful&project=Gizmo3D&lang=zh-CN">简体中文</a>
+        | <a href="https://openaitx.github.io/view.html?user=chrisizeful&project=Gizmo3D&lang=zh-TW">繁體中文</a>
+        | <a href="https://openaitx.github.io/view.html?user=chrisizeful&project=Gizmo3D&lang=ja">日本語</a>
+        | <a href="https://openaitx.github.io/view.html?user=chrisizeful&project=Gizmo3D&lang=ko">한국어</a>
+        | <a href="https://openaitx.github.io/view.html?user=chrisizeful&project=Gizmo3D&lang=hi">हिन्दी</a>
+        | <a href="https://openaitx.github.io/view.html?user=chrisizeful&project=Gizmo3D&lang=th">ไทย</a>
+        | <a href="https://openaitx.github.io/view.html?user=chrisizeful&project=Gizmo3D&lang=fr">Français</a>
+        | <a href="https://openaitx.github.io/view.html?user=chrisizeful&project=Gizmo3D&lang=de">Deutsch</a>
+        | <a href="https://openaitx.github.io/view.html?user=chrisizeful&project=Gizmo3D&lang=es">Español</a>
+        | <a href="https://openaitx.github.io/view.html?user=chrisizeful&project=Gizmo3D&lang=it">Italiano</a>
+        | <a href="https://openaitx.github.io/view.html?user=chrisizeful&project=Gizmo3D&lang=ru">Русский</a>
+        | <a href="https://openaitx.github.io/view.html?user=chrisizeful&project=Gizmo3D&lang=pt">Português</a>
+        | <a href="https://openaitx.github.io/view.html?user=chrisizeful&project=Gizmo3D&lang=nl">Nederlands</a>
+        | <a href="https://openaitx.github.io/view.html?user=chrisizeful&project=Gizmo3D&lang=pl">Polski</a>
+        | <a href="https://openaitx.github.io/view.html?user=chrisizeful&project=Gizmo3D&lang=ar">العربية</a>
+        | <a href="https://openaitx.github.io/view.html?user=chrisizeful&project=Gizmo3D&lang=fa">فارسی</a>
+        | <a href="https://openaitx.github.io/view.html?user=chrisizeful&project=Gizmo3D&lang=tr">Türkçe</a>
+        | <a href="https://openaitx.github.io/view.html?user=chrisizeful&project=Gizmo3D&lang=vi">Tiếng Việt</a>
+        | <a href="https://openaitx.github.io/view.html?user=chrisizeful&project=Gizmo3D&lang=id">Bahasa Indonesia</a>
+        | <a href="https://openaitx.github.io/view.html?user=chrisizeful&project=Gizmo3D&lang=as">অসমীয়া</
+      </div>
+    </div>
+  </details>
+</div>
+
 ![Banner](https://i.imgur.com/qyWHmxW.png)
 
 Gizmo3D encapsulates the Godot Engines 3D move/scale/rotation gizmos into a customizable node for use at runtime. The major differences are that you can edit all transformations at the same time, and customization options have been added. The selection box and axes can be toggled, colors changed, snapping intervals changed, and more. Transformation methods can be easily overriden to customize the default behavior. It is available in both C# and GDScript.
