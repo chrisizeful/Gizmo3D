@@ -645,6 +645,11 @@ public partial class Gizmo3D : Node3D
     public override void _EnterTree()
     {
         GetTree().Root.FocusExited += OnFocusExited;
+        if (IsNodeReady())
+        {
+            InitGizmoInstance();
+            UpdateTransformGizmo();
+        }
     }
 
     public override void _Process(double delta)

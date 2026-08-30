@@ -474,6 +474,9 @@ func get_selected_count() -> int:
 
 func _enter_tree() -> void:
 	get_tree().root.focus_exited.connect(_on_focus_exited)
+	if is_node_ready():
+		_init_gizmo_instance()
+		_update_transform_gizmo()
 
 func _process(delta : float) -> void:
 	_update_transform_gizmo()
