@@ -523,9 +523,10 @@ public partial class Gizmo3D : Node3D
     public override void _UnhandledInput(InputEvent @event)
     {
         Hovering = false;
-        if (!Visible)
+        if (!Visible || GetViewport().GetCamera3D() == null)
         {
             Editing = false;
+            Edit.Mode = TransformMode.None;
         }
         else if (@event is InputEventKey key)
         {
@@ -1104,9 +1105,14 @@ void fragment() {
         }
 
         Camera3D camera = GetViewport().GetCamera3D();
+        if (camera == null)
+        {
+            SetVisibility(false);
+            return;
+        }
+        
         Transform3D xform = Transform;
         Transform3D cameraTransform = camera.GlobalTransform;
-
         if (xform.Origin.IsEqualApprox(cameraTransform.Origin))
         {
             SetVisibility(false);
